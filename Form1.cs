@@ -1,11 +1,19 @@
 using System;
 using System.Drawing;
+using System.Reflection.Metadata.Ecma335;
 using System.Windows.Forms;
 
 namespace photo
 {
     public partial class Form1 : Form
     {
+
+        //새로운 탭 번호를 세어주는 변수
+        private int tabCount = 1;
+        // 삭제된 번호 저장소
+        private Stack<TabPage> deletedTabs = new Stack<TabPage>();
+
+
         // 이미지 드래그 중 여부를 나타내는 플래그
         private bool isDragging = false;
 
@@ -69,9 +77,51 @@ namespace photo
         }
 
         // [저장] 버튼 클릭 시 실행 (추후 구현 예정)
-        private void btn_Save_Click(object sender, EventArgs e)
+        private void btn_Save_Click(object sender, EventArgs e)        // TODO: 저장 기능 구현 (찬송)
         {
-            // TODO: 저장 기능 구현
+            // 픽쳐박스에 넣은 사진일 없을 때
+            if (pictureBox1.Image == null)
+            {
+                MessageBox.Show("저장할 이미지가 없습니다.");
+                return;
+            }
+            SaveFileDialog saveFileDialog = new SaveFileDialog();
+            saveFileDialog.Title = "이미지 저장";
+            saveFileDialog.Filter = "이미지 파일|*.jpg;*.jpeg;*.png;*.bmp;*.gif";
+
+
+            if (saveFileDialog.ShowDialog() == DialogResult.OK)
+            {
+                try
+                {
+                    System.Drawing.Imaging.ImageFormat format = System.Drawing.Imaging.ImageFormat.Png;
+                    string extension = System.IO.Path.GetExtension(saveFileDialog.FileName).ToLower();
+
+                    switch (extension)
+                    {
+                        case ".jpg":
+                        case ".jpeg":
+                            format = System.Drawing.Imaging.ImageFormat.Jpeg;
+                            break;
+                        case ".bmp":
+                            format = System.Drawing.Imaging.ImageFormat.Bmp;
+                            break;
+                        case ".png":
+                            format = System.Drawing.Imaging.ImageFormat.Bmp;
+                            break;
+                        case ".gif":
+                            format = System.Drawing.Imaging.ImageFormat.Bmp;
+                            break;
+                    }
+
+                    pictureBox1.Image.Save(saveFileDialog.FileName, format);
+                    MessageBox.Show("이미지가 성공적으로 저장되었습니다.");
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"이미지 저장 중 오류가 발생했습니다:\n{ex.Message}");
+                }
+            }
         }
 
         // 마우스 버튼을 누를 때 호출됨
@@ -139,6 +189,49 @@ namespace photo
                     e.Graphics.DrawRectangle(pen, rect);
                 }
             }
+        }
+
+        private void btnNewTabPage_Click(object sender, EventArgs e)       //탭페이지 추가 버튼 이벤트         
+        {
+            TabPage newTabPage = new TabPage($"tp {tabCount + 1}");
+
+            if (deletedTabs.Count > 0)
+            {
+                // 최근 삭제된 탭을 복원
+                newTabPage = deletedTabs.Pop();
+            }
+            else
+            {
+                // 새 탭 생성
+                tabCount++;
+            }
+            newTabPage.BackColor = Color.White;
+            // TabControl에 탭 추가
+            tabControl1.TabPages.Add(newTabPage);
+            // 새로 만든 탭으로 전환
+            tabControl1.SelectedTab = newTabPage;
+        }
+
+        private void btnDltTabPage_Click(object sender, EventArgs e)   //탭페이지 삭제 버튼 이벤트
+        {
+            if (tabControl1.TabPages.Count <= 1)
+            {
+                MessageBox.Show("하나의 탭은 남아있어야 합니다.");
+                return;
+            }
+            // 가장 마지막 탭 가져오기
+            int lastIndex = tabControl1.TabPages.Count - 1;
+            TabPage lastTab = tabControl1.TabPages[lastIndex];
+            TabPage selectedTab = tabControl1.SelectedTab;
+            // 탭 제거
+            tabControl1.TabPages.Remove(lastTab);
+
+
+
+            // 삭제하고 나서 마지막 탭을 자동으로 선택
+            tabControl1.SelectedIndex = tabControl1.TabPages.Count - 1;
+            deletedTabs.Push(selectedTab); // 삭제된 탭 저장
+
         }
     }
 }

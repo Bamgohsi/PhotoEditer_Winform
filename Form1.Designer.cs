@@ -39,7 +39,7 @@
             button3 = new Button();
             button2 = new Button();
             button1 = new Button();
-            tabPage2 = new TabPage();
+            tapPage = new TabPage();
             pictureBox1 = new PictureBox();
             tabControl1 = new TabControl();
             menuStrip1 = new MenuStrip();
@@ -49,11 +49,13 @@
             toolStripp_Save = new ToolStripMenuItem();
             toolStripMenuItem3 = new ToolStripMenuItem();
             groupBox2 = new GroupBox();
+            btnDltTabPage = new Button();
+            btnNewTabPage = new Button();
             btn_Save = new Button();
             btn_NewFile = new Button();
             btn_Open = new Button();
             groupBox1.SuspendLayout();
-            tabPage2.SuspendLayout();
+            tapPage.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             tabControl1.SuspendLayout();
             menuStrip1.SuspendLayout();
@@ -162,16 +164,16 @@
             button1.TabIndex = 0;
             button1.UseVisualStyleBackColor = true;
             // 
-            // tabPage2
+            // tapPage
             // 
-            tabPage2.Controls.Add(pictureBox1);
-            tabPage2.Location = new Point(4, 24);
-            tabPage2.Name = "tabPage2";
-            tabPage2.Padding = new Padding(3);
-            tabPage2.Size = new Size(581, 330);
-            tabPage2.TabIndex = 1;
-            tabPage2.Text = "tabPage2";
-            tabPage2.UseVisualStyleBackColor = true;
+            tapPage.BackColor = Color.White;
+            tapPage.Controls.Add(pictureBox1);
+            tapPage.Location = new Point(4, 24);
+            tapPage.Name = "tapPage";
+            tapPage.Padding = new Padding(3);
+            tapPage.Size = new Size(581, 330);
+            tapPage.TabIndex = 1;
+            tapPage.Text = "tp1";
             // 
             // pictureBox1
             // 
@@ -188,7 +190,7 @@
             // 
             // tabControl1
             // 
-            tabControl1.Controls.Add(tabPage2);
+            tabControl1.Controls.Add(tapPage);
             tabControl1.Location = new Point(134, 71);
             tabControl1.Name = "tabControl1";
             tabControl1.SelectedIndex = 0;
@@ -240,6 +242,8 @@
             // 
             // groupBox2
             // 
+            groupBox2.Controls.Add(btnDltTabPage);
+            groupBox2.Controls.Add(btnNewTabPage);
             groupBox2.Controls.Add(btn_Save);
             groupBox2.Controls.Add(btn_NewFile);
             groupBox2.Controls.Add(btn_Open);
@@ -248,6 +252,26 @@
             groupBox2.Size = new Size(776, 41);
             groupBox2.TabIndex = 3;
             groupBox2.TabStop = false;
+            // 
+            // btnDltTabPage
+            // 
+            btnDltTabPage.Location = new Point(151, 12);
+            btnDltTabPage.Name = "btnDltTabPage";
+            btnDltTabPage.Size = new Size(27, 23);
+            btnDltTabPage.TabIndex = 1;
+            btnDltTabPage.Text = "텡";
+            btnDltTabPage.UseVisualStyleBackColor = true;
+            btnDltTabPage.Click += btnDltTabPage_Click;
+            // 
+            // btnNewTabPage
+            // 
+            btnNewTabPage.Location = new Point(118, 12);
+            btnNewTabPage.Name = "btnNewTabPage";
+            btnNewTabPage.Size = new Size(27, 23);
+            btnNewTabPage.TabIndex = 1;
+            btnNewTabPage.Text = "탯";
+            btnNewTabPage.UseVisualStyleBackColor = true;
+            btnNewTabPage.Click += btnNewTabPage_Click;
             // 
             // btn_Save
             // 
@@ -293,8 +317,8 @@
             Text = "Form1";
             Load += Form1_Load;
             groupBox1.ResumeLayout(false);
-            tabPage2.ResumeLayout(false);
-            tabPage2.PerformLayout();
+            tapPage.ResumeLayout(false);
+            tapPage.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).EndInit();
             tabControl1.ResumeLayout(false);
             menuStrip1.ResumeLayout(false);
@@ -311,9 +335,8 @@
         private Button button3;
         private Button button2;
         private Button button1;
-        private TabPage tabPage2;
+        private TabPage tapPage;
         private TabControl tabControl1;
-        private Button button12;
         private Button btn_Road;
         private Button button10;
         private Button button9;
@@ -332,5 +355,7 @@
         private Button btn_Save;
         private Button btn_NewFile;
         private PictureBox pictureBox1;
+        private Button btnNewTabPage;
+        private Button btnDltTabPage;
     }
 }
