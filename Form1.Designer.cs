@@ -40,6 +40,7 @@
             button2 = new Button();
             button1 = new Button();
             tabPage2 = new TabPage();
+            tableLayoutPanel1 = new TableLayoutPanel();
             pictureBox1 = new PictureBox();
             tabControl1 = new TabControl();
             menuStrip1 = new MenuStrip();
@@ -52,6 +53,7 @@
             btn_Save = new Button();
             btn_NewFile = new Button();
             btn_Open = new Button();
+            Rigth_Panel_GropBox = new GroupBox();
             groupBox1.SuspendLayout();
             tabPage2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
@@ -72,9 +74,9 @@
             groupBox1.Controls.Add(button3);
             groupBox1.Controls.Add(button2);
             groupBox1.Controls.Add(button1);
-            groupBox1.Location = new Point(12, 80);
+            groupBox1.Location = new Point(12, 65);
             groupBox1.Name = "groupBox1";
-            groupBox1.Size = new Size(106, 358);
+            groupBox1.Size = new Size(106, 856);
             groupBox1.TabIndex = 0;
             groupBox1.TabStop = false;
             // 
@@ -161,17 +163,32 @@
             button1.Size = new Size(42, 35);
             button1.TabIndex = 0;
             button1.UseVisualStyleBackColor = true;
+            button1.Click += button1_Click;
             // 
             // tabPage2
             // 
+            tabPage2.Controls.Add(tableLayoutPanel1);
             tabPage2.Controls.Add(pictureBox1);
             tabPage2.Location = new Point(4, 24);
             tabPage2.Name = "tabPage2";
             tabPage2.Padding = new Padding(3);
-            tabPage2.Size = new Size(581, 330);
+            tabPage2.Size = new Size(1379, 826);
             tabPage2.TabIndex = 1;
             tabPage2.Text = "tabPage2";
             tabPage2.UseVisualStyleBackColor = true;
+            // 
+            // tableLayoutPanel1
+            // 
+            tableLayoutPanel1.ColumnCount = 2;
+            tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            tableLayoutPanel1.Location = new Point(1389, 0);
+            tableLayoutPanel1.Name = "tableLayoutPanel1";
+            tableLayoutPanel1.RowCount = 2;
+            tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+            tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+            tableLayoutPanel1.Size = new Size(172, 427);
+            tableLayoutPanel1.TabIndex = 4;
             // 
             // pictureBox1
             // 
@@ -192,15 +209,16 @@
             tabControl1.Location = new Point(134, 71);
             tabControl1.Name = "tabControl1";
             tabControl1.SelectedIndex = 0;
-            tabControl1.Size = new Size(589, 358);
+            tabControl1.Size = new Size(1387, 854);
             tabControl1.TabIndex = 1;
             // 
             // menuStrip1
             // 
+            menuStrip1.ImageScalingSize = new Size(24, 24);
             menuStrip1.Items.AddRange(new ToolStripItem[] { toolStrip_File, toolStripMenuItem3 });
             menuStrip1.Location = new Point(0, 0);
             menuStrip1.Name = "menuStrip1";
-            menuStrip1.Size = new Size(800, 24);
+            menuStrip1.Size = new Size(1711, 24);
             menuStrip1.TabIndex = 2;
             menuStrip1.Text = "menuStrip1";
             // 
@@ -243,15 +261,15 @@
             groupBox2.Controls.Add(btn_Save);
             groupBox2.Controls.Add(btn_NewFile);
             groupBox2.Controls.Add(btn_Open);
-            groupBox2.Location = new Point(12, 24);
+            groupBox2.Location = new Point(12, 27);
             groupBox2.Name = "groupBox2";
-            groupBox2.Size = new Size(776, 41);
+            groupBox2.Size = new Size(1505, 41);
             groupBox2.TabIndex = 3;
             groupBox2.TabStop = false;
             // 
             // btn_Save
             // 
-            btn_Save.Location = new Point(84, 12);
+            btn_Save.Location = new Point(73, 12);
             btn_Save.Name = "btn_Save";
             btn_Save.Size = new Size(28, 23);
             btn_Save.TabIndex = 0;
@@ -261,7 +279,7 @@
             // 
             // btn_NewFile
             // 
-            btn_NewFile.Location = new Point(20, 12);
+            btn_NewFile.Location = new Point(6, 12);
             btn_NewFile.Name = "btn_NewFile";
             btn_NewFile.Size = new Size(28, 23);
             btn_NewFile.TabIndex = 0;
@@ -271,7 +289,7 @@
             // 
             // btn_Open
             // 
-            btn_Open.Location = new Point(50, 12);
+            btn_Open.Location = new Point(39, 12);
             btn_Open.Name = "btn_Open";
             btn_Open.Size = new Size(28, 23);
             btn_Open.TabIndex = 0;
@@ -279,11 +297,21 @@
             btn_Open.UseVisualStyleBackColor = true;
             btn_Open.Click += btn_Open_Click;
             // 
+            // Rigth_Panel_GropBox
+            // 
+            Rigth_Panel_GropBox.Location = new Point(1525, 91);
+            Rigth_Panel_GropBox.Name = "Rigth_Panel_GropBox";
+            Rigth_Panel_GropBox.Size = new Size(174, 830);
+            Rigth_Panel_GropBox.TabIndex = 4;
+            Rigth_Panel_GropBox.TabStop = false;
+            Rigth_Panel_GropBox.Text = "편집 속성";
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(800, 450);
+            ClientSize = new Size(1711, 954);
+            Controls.Add(Rigth_Panel_GropBox);
             Controls.Add(groupBox2);
             Controls.Add(tabControl1);
             Controls.Add(groupBox1);
@@ -332,5 +360,7 @@
         private Button btn_Save;
         private Button btn_NewFile;
         private PictureBox pictureBox1;
+        private TableLayoutPanel tableLayoutPanel1;
+        private GroupBox Rigth_Panel_GropBox;
     }
 }

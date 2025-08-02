@@ -21,6 +21,12 @@ namespace photo
 
             // pictureBox1에 커스텀 그리기(Paint) 이벤트 연결
             pictureBox1.Paint += pictureBox1_Paint;
+            Rigth_Panel_GropBox.Visible = false;
+
+            // 버튼들의 Click 이벤트에 동일한 핸들러를 연결
+            button2.Click += button1_Click;
+            button3.Click += button1_Click;
+            button4.Click += button1_Click;
         }
 
         private void button4_Click(object sender, EventArgs e)
@@ -119,6 +125,9 @@ namespace photo
         private void Form1_Load(object sender, EventArgs e)
         {
             // 현재는 비어 있음
+
+            this.WindowState = FormWindowState.Maximized; // 전체화면 시작
+            //groupBox3.Visible = !groupBox1.Visible;
         }
 
         // pictureBox1이 다시 그려질 때 호출됨
@@ -138,6 +147,21 @@ namespace photo
                     // 테두리 그리기
                     e.Graphics.DrawRectangle(pen, rect);
                 }
+            }
+        }
+
+        // 버튼을 눌렀을 때 그룹박스를 띄웠다 숨겼다 하는 기능
+        private void button1_Click(object sender, EventArgs e)
+        {
+            if (Rigth_Panel_GropBox.Visible == false)
+            {
+                // 그룹박스가 숨겨져 있다면, 보이게 합니다.
+                Rigth_Panel_GropBox.Visible = true;
+            }
+            else
+            {
+                // 그룹박스가 보인다면, 숨깁니다.
+                Rigth_Panel_GropBox.Visible = false;
             }
         }
     }
