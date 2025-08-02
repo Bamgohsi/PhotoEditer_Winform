@@ -52,12 +52,31 @@
             btn_Save = new Button();
             btn_NewFile = new Button();
             btn_Open = new Button();
+            grpFilterPanel = new GroupBox();
+            txtBlue = new TextBox();
+            txtGreen = new TextBox();
+            txtRed = new TextBox();
+            btnResetRGB = new Button();
+            trackBlue = new TrackBar();
+            label3 = new Label();
+            trackGreen = new TrackBar();
+            label2 = new Label();
+            trackRed = new TrackBar();
+            label1 = new Label();
+            btnOriginal = new Button();
+            btnVintage = new Button();
+            btnCool = new Button();
+            btnWarm = new Button();
             groupBox1.SuspendLayout();
             tabPage2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             tabControl1.SuspendLayout();
             menuStrip1.SuspendLayout();
             groupBox2.SuspendLayout();
+            grpFilterPanel.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)trackBlue).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)trackGreen).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)trackRed).BeginInit();
             SuspendLayout();
             // 
             // groupBox1
@@ -85,7 +104,6 @@
             button10.Size = new Size(42, 35);
             button10.TabIndex = 0;
             button10.UseVisualStyleBackColor = true;
-            button10.Click += button4_Click;
             // 
             // button9
             // 
@@ -102,7 +120,6 @@
             button8.Size = new Size(42, 35);
             button8.TabIndex = 0;
             button8.UseVisualStyleBackColor = true;
-            button8.Click += button4_Click;
             // 
             // button7
             // 
@@ -119,7 +136,6 @@
             button6.Size = new Size(42, 35);
             button6.TabIndex = 0;
             button6.UseVisualStyleBackColor = true;
-            button6.Click += button4_Click;
             // 
             // button5
             // 
@@ -136,7 +152,6 @@
             button4.Size = new Size(42, 35);
             button4.TabIndex = 0;
             button4.UseVisualStyleBackColor = true;
-            button4.Click += button4_Click;
             // 
             // button3
             // 
@@ -161,6 +176,7 @@
             button1.Size = new Size(42, 35);
             button1.TabIndex = 0;
             button1.UseVisualStyleBackColor = true;
+            button1.Click += button1_Click;
             // 
             // tabPage2
             // 
@@ -200,7 +216,7 @@
             menuStrip1.Items.AddRange(new ToolStripItem[] { toolStrip_File, toolStripMenuItem3 });
             menuStrip1.Location = new Point(0, 0);
             menuStrip1.Name = "menuStrip1";
-            menuStrip1.Size = new Size(800, 24);
+            menuStrip1.Size = new Size(975, 24);
             menuStrip1.TabIndex = 2;
             menuStrip1.Text = "menuStrip1";
             // 
@@ -279,11 +295,167 @@
             btn_Open.UseVisualStyleBackColor = true;
             btn_Open.Click += btn_Open_Click;
             // 
+            // grpFilterPanel
+            // 
+            grpFilterPanel.Controls.Add(txtBlue);
+            grpFilterPanel.Controls.Add(txtGreen);
+            grpFilterPanel.Controls.Add(txtRed);
+            grpFilterPanel.Controls.Add(btnResetRGB);
+            grpFilterPanel.Controls.Add(trackBlue);
+            grpFilterPanel.Controls.Add(label3);
+            grpFilterPanel.Controls.Add(trackGreen);
+            grpFilterPanel.Controls.Add(label2);
+            grpFilterPanel.Controls.Add(trackRed);
+            grpFilterPanel.Controls.Add(label1);
+            grpFilterPanel.Controls.Add(btnOriginal);
+            grpFilterPanel.Controls.Add(btnVintage);
+            grpFilterPanel.Controls.Add(btnCool);
+            grpFilterPanel.Controls.Add(btnWarm);
+            grpFilterPanel.Location = new Point(742, 95);
+            grpFilterPanel.Name = "grpFilterPanel";
+            grpFilterPanel.Size = new Size(199, 455);
+            grpFilterPanel.TabIndex = 4;
+            grpFilterPanel.TabStop = false;
+            grpFilterPanel.Text = "FilterPanel";
+            // 
+            // txtBlue
+            // 
+            txtBlue.Location = new Point(21, 377);
+            txtBlue.Name = "txtBlue";
+            txtBlue.Size = new Size(156, 23);
+            txtBlue.TabIndex = 5;
+            txtBlue.TextChanged += txtBlue_TextChanged;
+            // 
+            // txtGreen
+            // 
+            txtGreen.Location = new Point(21, 259);
+            txtGreen.Name = "txtGreen";
+            txtGreen.Size = new Size(156, 23);
+            txtGreen.TabIndex = 5;
+            txtGreen.TextChanged += txtGreen_TextChanged;
+            // 
+            // txtRed
+            // 
+            txtRed.Location = new Point(21, 159);
+            txtRed.Name = "txtRed";
+            txtRed.Size = new Size(156, 23);
+            txtRed.TabIndex = 5;
+            txtRed.TextChanged += txtRed_TextChanged;
+            // 
+            // btnResetRGB
+            // 
+            btnResetRGB.Location = new Point(62, 426);
+            btnResetRGB.Name = "btnResetRGB";
+            btnResetRGB.Size = new Size(75, 23);
+            btnResetRGB.TabIndex = 4;
+            btnResetRGB.Text = "초기화";
+            btnResetRGB.UseVisualStyleBackColor = true;
+            btnResetRGB.Click += btnResetRGB_Click;
+            // 
+            // trackBlue
+            // 
+            trackBlue.Location = new Point(21, 326);
+            trackBlue.Maximum = 255;
+            trackBlue.Name = "trackBlue";
+            trackBlue.Size = new Size(156, 45);
+            trackBlue.TabIndex = 3;
+            trackBlue.Value = 128;
+            trackBlue.Scroll += trackBlue_Scroll;
+            // 
+            // label3
+            // 
+            label3.AutoSize = true;
+            label3.Location = new Point(9, 308);
+            label3.Name = "label3";
+            label3.Size = new Size(14, 15);
+            label3.TabIndex = 2;
+            label3.Text = "B";
+            // 
+            // trackGreen
+            // 
+            trackGreen.Location = new Point(21, 208);
+            trackGreen.Maximum = 255;
+            trackGreen.Name = "trackGreen";
+            trackGreen.Size = new Size(156, 45);
+            trackGreen.TabIndex = 3;
+            trackGreen.Value = 128;
+            trackGreen.Scroll += trackGreen_Scroll;
+            // 
+            // label2
+            // 
+            label2.AutoSize = true;
+            label2.Location = new Point(9, 187);
+            label2.Name = "label2";
+            label2.Size = new Size(15, 15);
+            label2.TabIndex = 2;
+            label2.Text = "G";
+            label2.Click += label2_Click;
+            // 
+            // trackRed
+            // 
+            trackRed.Location = new Point(21, 120);
+            trackRed.Maximum = 255;
+            trackRed.Name = "trackRed";
+            trackRed.Size = new Size(156, 45);
+            trackRed.TabIndex = 3;
+            trackRed.Value = 128;
+            trackRed.Scroll += trackRed_Scroll;
+            // 
+            // label1
+            // 
+            label1.AutoSize = true;
+            label1.Location = new Point(9, 99);
+            label1.Name = "label1";
+            label1.Size = new Size(14, 15);
+            label1.TabIndex = 2;
+            label1.Text = "R";
+            // 
+            // btnOriginal
+            // 
+            btnOriginal.Location = new Point(102, 60);
+            btnOriginal.Name = "btnOriginal";
+            btnOriginal.Size = new Size(75, 23);
+            btnOriginal.TabIndex = 1;
+            btnOriginal.Text = "Original";
+            btnOriginal.UseVisualStyleBackColor = true;
+            btnOriginal.Click += btnOriginal_Click;
+            // 
+            // btnVintage
+            // 
+            btnVintage.Location = new Point(21, 60);
+            btnVintage.Name = "btnVintage";
+            btnVintage.Size = new Size(75, 23);
+            btnVintage.TabIndex = 0;
+            btnVintage.Text = "Vintage";
+            btnVintage.UseVisualStyleBackColor = true;
+            btnVintage.Click += btnVintage_Click;
+            // 
+            // btnCool
+            // 
+            btnCool.Location = new Point(102, 28);
+            btnCool.Name = "btnCool";
+            btnCool.Size = new Size(75, 23);
+            btnCool.TabIndex = 1;
+            btnCool.Text = "Cool";
+            btnCool.UseVisualStyleBackColor = true;
+            btnCool.Click += btnCool_Click;
+            // 
+            // btnWarm
+            // 
+            btnWarm.Location = new Point(21, 28);
+            btnWarm.Name = "btnWarm";
+            btnWarm.Size = new Size(75, 23);
+            btnWarm.TabIndex = 0;
+            btnWarm.Text = "Warm";
+            btnWarm.UseVisualStyleBackColor = true;
+            btnWarm.Click += button11_Click;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(800, 450);
+            ClientSize = new Size(975, 575);
+            Controls.Add(grpFilterPanel);
             Controls.Add(groupBox2);
             Controls.Add(tabControl1);
             Controls.Add(groupBox1);
@@ -300,6 +472,11 @@
             menuStrip1.ResumeLayout(false);
             menuStrip1.PerformLayout();
             groupBox2.ResumeLayout(false);
+            grpFilterPanel.ResumeLayout(false);
+            grpFilterPanel.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)trackBlue).EndInit();
+            ((System.ComponentModel.ISupportInitialize)trackGreen).EndInit();
+            ((System.ComponentModel.ISupportInitialize)trackRed).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -313,7 +490,7 @@
         private Button button1;
         private TabPage tabPage2;
         private TabControl tabControl1;
-        private Button button12;
+        private Button btnResetRGB;
         private Button btn_Road;
         private Button button10;
         private Button button9;
@@ -332,5 +509,19 @@
         private Button btn_Save;
         private Button btn_NewFile;
         private PictureBox pictureBox1;
+        private GroupBox grpFilterPanel;
+        private TrackBar trackBlue;
+        private Label label3;
+        private TrackBar trackGreen;
+        private Label label2;
+        private TrackBar trackRed;
+        private Label label1;
+        private Button btnOriginal;
+        private Button btnVintage;
+        private Button btnCool;
+        private Button btnWarm;
+        private TextBox txtBlue;
+        private TextBox txtGreen;
+        private TextBox txtRed;
     }
 }
