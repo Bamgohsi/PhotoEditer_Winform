@@ -1,21 +1,22 @@
-using System;
+ï»¿using System;
 using System.ComponentModel;
 using System.Drawing;
 using System.Windows.Forms;
 using System.Xml.Linq;
+using static System.Net.WebRequestMethods;
 
 namespace photo
 {
     public partial class Form1 : Form
     {
         
-        // ÀÌ¹ÌÁö µå·¡±× Áß ¿©ºÎ¸¦ ³ªÅ¸³»´Â ÇÃ·¡±×
+        // ì´ë¯¸ì§€ ë“œë˜ê·¸ ì¤‘ ì—¬ë¶€ë¥¼ ë‚˜íƒ€ë‚´ëŠ” í”Œë˜ê·¸
         private bool isDragging = false;
 
-        // µå·¡±× ½ÃÀÛ ½Ã ¸¶¿ì½º Å¬¸¯ ÁöÁ¡ ÁÂÇ¥
+        // ë“œë˜ê·¸ ì‹œì‘ ì‹œ ë§ˆìš°ìŠ¤ í´ë¦­ ì§€ì  ì¢Œí‘œ
         private Point clickOffset;
 
-        // ¼±ÅÃ Å×µÎ¸®¸¦ Ç¥½ÃÇÒÁö ¿©ºÎ (¸¶¿ì½º Å¬¸¯ ½Ã true)
+        // ì„ íƒ í…Œë‘ë¦¬ë¥¼ í‘œì‹œí• ì§€ ì—¬ë¶€ (ë§ˆìš°ìŠ¤ í´ë¦­ ì‹œ true)
         private bool showSelectionBorder = false;
 
         private Point lastMousePosition;
@@ -26,24 +27,24 @@ namespace photo
 
          
 
-            // pictureBox1¿¡ Ä¿½ºÅÒ ±×¸®±â(Paint) ÀÌº¥Æ® ¿¬°á
+            // pictureBox1ì— ì»¤ìŠ¤í…€ ê·¸ë¦¬ê¸°(Paint) ì´ë²¤íŠ¸ ì—°ê²°
             pictureBox1.Paint += pictureBox1_Paint;
 
             
-            // PictureBox µå·¡±× Ã³¸® ÀÌº¥Æ® ¿¬°á(ÀÌÁøÈñ)
+            // PictureBox ë“œë˜ê·¸ ì²˜ë¦¬ ì´ë²¤íŠ¸ ì—°ê²°(ì´ì§„í¬)
             pictureBox1.MouseDown += pictureBox1_MouseDown;
             pictureBox1.MouseMove += pictureBox1_MouseMove;
             pictureBox1.MouseUp += pictureBox1_MouseUp;
 
-            // Æû(¹× Áö½ÄÄÁÆ®·Ñ) Å¬¸¯ ½Ã Å×µÎ¸® ÇØÁ¦ ÀÌº¥Æ® ¿¬°á(ÀÌÁøÈñ)
+            // í¼(ë° ì§€ì‹ì»¨íŠ¸ë¡¤) í´ë¦­ ì‹œ í…Œë‘ë¦¬ í•´ì œ ì´ë²¤íŠ¸ ì—°ê²°(ì´ì§„í¬)
             this.MouseDown += Form1_MouseDown;
 
-            // Àç±ÍÀûÀ¸·Î ¸ğµç Áö½Ä ÄÁÆ®·Ñ¿¡µµ ¿¬°áÇÕ´ÏµÕ(ÀÌÁøÈñ)
+            // ì¬ê·€ì ìœ¼ë¡œ ëª¨ë“  ì§€ì‹ ì»¨íŠ¸ë¡¤ì—ë„ ì—°ê²°í•©ë‹ˆë‘¥(ì´ì§„í¬)
             HookMouseDown(this);
         }
 
 
-        //Àç±ÍÀûÀ¸·Î parent¿Í ±× ÀÚ½Ä ÄÁÆ®·Ñµé¿¡ Form1_MouseDown ÈÅÀ» °Ì´ÏµÕ.(ÀÌÁøÈñ)
+        //ì¬ê·€ì ìœ¼ë¡œ parentì™€ ê·¸ ìì‹ ì»¨íŠ¸ë¡¤ë“¤ì— Form1_MouseDown í›…ì„ ê²ë‹ˆë‘¥.(ì´ì§„í¬)
         private void HookMouseDown(Control parent)
         {
             foreach (Control ctl in parent.Controls)
@@ -58,63 +59,64 @@ namespace photo
         private void button4_Click(object sender, EventArgs e)
         {
            
-            // ¹Ì»ç¿ë ¹öÆ° - ÃßÈÄ ±â´É ¿¬°á °¡´É
+            // ë¯¸ì‚¬ìš© ë²„íŠ¼ - ì¶”í›„ ê¸°ëŠ¥ ì—°ê²° ê°€ëŠ¥
         }
 
-        // [»õ·Î ¸¸µé±â] ¹öÆ° Å¬¸¯ ½Ã ½ÇÇà
-        // pictureBoxÀÇ ÀÌ¹ÌÁö ÃÊ±âÈ­
+        // [ìƒˆë¡œ ë§Œë“¤ê¸°] ë²„íŠ¼ í´ë¦­ ì‹œ ì‹¤í–‰
+        // pictureBoxì˜ ì´ë¯¸ì§€ ì´ˆê¸°í™”
         private void btn_NewFile_Click(object sender, EventArgs e)
         {
             if (pictureBox1.Image != null)
             {
-                pictureBox1.Image.Dispose(); // ±âÁ¸ ÀÌ¹ÌÁö ¸Ş¸ğ¸® ÇØÁ¦
+                pictureBox1.Image.Dispose(); // ê¸°ì¡´ ì´ë¯¸ì§€ ë©”ëª¨ë¦¬ í•´ì œ
                 pictureBox1.Image = null;
-                showSelectionBorder = false; // ÀÌ¹ÌÁö ÃÊ±âÈ­ ½Ã Å×µÎ¸®µµ ¼û±è
-                pictureBox1.Invalidate(); // ´Ù½Ã ±×¸®±â ¿äÃ»
+                showSelectionBorder = false; // ì´ë¯¸ì§€ ì´ˆê¸°í™” ì‹œ í…Œë‘ë¦¬ë„ ìˆ¨ê¹€
+                pictureBox1.Invalidate(); // ë‹¤ì‹œ ê·¸ë¦¬ê¸° ìš”ì²­
             }
         }
 
-        // [¿­±â] ¹öÆ° Å¬¸¯ ½Ã ½ÇÇà
-        // ÀÌ¹ÌÁö ÆÄÀÏÀ» ¼±ÅÃÇÏ°í pictureBox¿¡ ·Îµå
+        // [ì—´ê¸°] ë²„íŠ¼ í´ë¦­ ì‹œ ì‹¤í–‰
+        // ì´ë¯¸ì§€ íŒŒì¼ì„ ì„ íƒí•˜ê³  pictureBoxì— ë¡œë“œ
         private void btn_Open_Click(object sender, EventArgs e)
         {
             OpenFileDialog openFileDialog = new OpenFileDialog();
-            openFileDialog.Title = "ÀÌ¹ÌÁö ¿­±â";
-            openFileDialog.Filter = "ÀÌ¹ÌÁö ÆÄÀÏ|*.jpg;*.jpeg;*.png;*.bmp;*.gif";
+            openFileDialog.Title = "ì´ë¯¸ì§€ ì—´ê¸°";
+            openFileDialog.Filter = "ì´ë¯¸ì§€ íŒŒì¼|*.jpg;*.jpeg;*.png;*.bmp;*.gif";
 
             if (openFileDialog.ShowDialog() == DialogResult.OK)
             {
                 try
                 {
-                    // ±âÁ¸ ÀÌ¹ÌÁö°¡ ÀÖÀ» °æ¿ì ¸Ş¸ğ¸® ÇØÁ¦
+                    // ê¸°ì¡´ ì´ë¯¸ì§€ê°€ ìˆì„ ê²½ìš° ë©”ëª¨ë¦¬ í•´ì œ
                     pictureBox1.Image?.Dispose();
 
-                    // »õ·Î¿î ÀÌ¹ÌÁö ·Îµå
+                    // ìƒˆë¡œìš´ ì´ë¯¸ì§€ ë¡œë“œ
                     Image img = Image.FromFile(openFileDialog.FileName);
                     pictureBox1.Image = img;
 
-                    // ÀÌ¹ÌÁö Å©±â¿¡ ¸Â°Ô PictureBox Å©±â Á¶Àı
-                    pictureBox1.SizeMode = PictureBoxSizeMode.AutoSize;
-                    pictureBox1.Size = img.Size;
+                    // ì´ë¯¸ì§€ í¬ê¸°ì— ë§ê²Œ PictureBox í¬ê¸° ì¡°ì ˆ
+                    //ì‚¬ì§„ì´ í¬ê²Œë¶ˆëŸ¬ì™€ì ¸ì„œ sizeë¥¼ AutoSizeì—ì„œ Zoomìœ¼ë¡œ ë³€ê²½ ì¶”í›„ì— í•„ìš”ì‹œ ë‹¤ì‹œ ë³€ê²½(ì´ì§„í¬)
+                    pictureBox1.SizeMode = PictureBoxSizeMode.Zoom;
+                   // pictureBox1.Size = img.Size;
 
 
-                    // pictureBox À§Ä¡ ¼³Á¤ (ÁÂÃø »ó´Ü ¿©¹é)
-                    pictureBox1.Location = new Point(10, 10);
+                    // pictureBox ìœ„ì¹˜ ì„¤ì • (ì¢Œì¸¡ ìƒë‹¨ ì—¬ë°±)
+                   // pictureBox1.Location = new Point(10, 10);(ì—¬ë°±ì´ ë³´ì—¬ ì£¼ì„ì²˜ë¦¬í•¨(ì´ì§„í¬)
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("ÀÌ¹ÌÁö¸¦ ºÒ·¯¿À´Â Áß ¿À·ù ¹ß»ı: " + ex.Message);
+                    MessageBox.Show("ì´ë¯¸ì§€ë¥¼ ë¶ˆëŸ¬ì˜¤ëŠ” ì¤‘ ì˜¤ë¥˜ ë°œìƒ: " + ex.Message);
                 }
             }
         }
 
-        // [ÀúÀå] ¹öÆ° Å¬¸¯ ½Ã ½ÇÇà (ÃßÈÄ ±¸Çö ¿¹Á¤)
+        // [ì €ì¥] ë²„íŠ¼ í´ë¦­ ì‹œ ì‹¤í–‰ (ì¶”í›„ êµ¬í˜„ ì˜ˆì •)
         private void btn_Save_Click(object sender, EventArgs e)
         {
-            // TODO: ÀúÀå ±â´É ±¸Çö
-            MessageBox.Show("ÀúÀå ±â´ÉÀº ¾ÆÁ÷ ±¸ÇöµÇÁö ¾Ê¾Ò½À´Ï´Ù.");
+            // TODO: ì €ì¥ ê¸°ëŠ¥ êµ¬í˜„
+            MessageBox.Show("ì €ì¥ ê¸°ëŠ¥ì€ ì•„ì§ êµ¬í˜„ë˜ì§€ ì•Šì•˜ìŠµë‹ˆë‹¤.");
         }
-        // ¼öÁ¤: Æû ¶Ç´Â Áö½ÄÄÁÆ®·Ñ Å¬¸¯½Ã È£Ãâ, Å¬¸¯ÁöÁ¡À» Æû(client) ÁÂÇ¥·Î º¯È¯ÇÏ¿© pictureBox¿ÜºÎ°Ë»ç(ÀÌÁøÈñ)
+        // ìˆ˜ì •: í¼ ë˜ëŠ” ì§€ì‹ì»¨íŠ¸ë¡¤ í´ë¦­ì‹œ í˜¸ì¶œ, í´ë¦­ì§€ì ì„ í¼(client) ì¢Œí‘œë¡œ ë³€í™˜í•˜ì—¬ pictureBoxì™¸ë¶€ê²€ì‚¬(ì´ì§„í¬)
         private void Form1_MouseDown(object sender, MouseEventArgs e)
         {
             Point clickPt;
@@ -127,93 +129,127 @@ namespace photo
                 Control ctl = (Control)sender;
                 clickPt = this.PointToClient(ctl.PointToScreen(e.Location));
             }
-            // pictureBox1 ¹ÛÀ» Å¬¸¯ÇßÀ¸¸é Å×µÎ¸® ²û
+            // pictureBox1 ë°–ì„ í´ë¦­í–ˆìœ¼ë©´ í…Œë‘ë¦¬ ë”
             if (pictureBox1.Image != null
                 && showSelectionBorder
-                && !pictureBox1.Bounds.Contains(e.Location))    // <- ¼öÁ¤: clicpt »ç¿ë
+                && !pictureBox1.Bounds.Contains(e.Location))    // <- ìˆ˜ì •: clicpt ì‚¬ìš©
             {
                 showSelectionBorder = false;
                 pictureBox1.Invalidate();
             }
         }
 
-        // ¸¶¿ì½º ¹öÆ°À» ´©¸¦ ¶§ È£ÃâµÊ
-        // µå·¡±× ½ÃÀÛ Ã³¸® ¹× ¼±ÅÃ Å×µÎ¸® Ç¥½Ã
+        // ë§ˆìš°ìŠ¤ ë²„íŠ¼ì„ ëˆ„ë¥¼ ë•Œ í˜¸ì¶œë¨
+        // ë“œë˜ê·¸ ì‹œì‘ ì²˜ë¦¬ ë° ì„ íƒ í…Œë‘ë¦¬ í‘œì‹œ
         private void pictureBox1_MouseDown(object sender, MouseEventArgs e)
         {
             if (pictureBox1.Image != null && e.Button == MouseButtons.Left)
             {
-                isDragging = true;          // µå·¡±× ½ÃÀÛ
-                clickOffset = e.Location;   // ¸¶¿ì½º Å¬¸¯ ÁÂÇ¥ ÀúÀå
-                showSelectionBorder = true; // Å×µÎ¸® Ç¥½Ã ON
-                pictureBox1.Invalidate();   // ´Ù½Ã ±×¸®±â ¿äÃ» (Paint È£Ãâ)
+                isDragging = true;          // ë“œë˜ê·¸ ì‹œì‘
+                clickOffset = e.Location;   // ë§ˆìš°ìŠ¤ í´ë¦­ ì¢Œí‘œ ì €ì¥
+                showSelectionBorder = true; // í…Œë‘ë¦¬ í‘œì‹œ ON
+                pictureBox1.Invalidate();   // ë‹¤ì‹œ ê·¸ë¦¬ê¸° ìš”ì²­ (Paint í˜¸ì¶œ)
 
-                // µå·¡±× ½ÃÀÛ ½ÃÁ¡ÀÇ ¸¶¿ì½º ½ºÅ©¸° ÁÂÇ¥ ÀúÀå
+                // ë“œë˜ê·¸ ì‹œì‘ ì‹œì ì˜ ë§ˆìš°ìŠ¤ ìŠ¤í¬ë¦° ì¢Œí‘œ ì €ì¥
 
                 lastMousePosition = Control.MousePosition;
             }
         }
-
-        // ¸¶¿ì½º¸¦ ÀÌµ¿ÇÒ ¶§ È£ÃâµÊ (µå·¡±× ÁßÀÏ ¶§¸¸)
+        //MousteMoveì—ì„œ ì»¤ì„œë³€ê²½(ë/ëŒ€ê°ì„ /ì‚¬ì´ë“œ)
         private void pictureBox1_MouseMove(object sender, MouseEventArgs e)
         {
-            if (isDragging)
+            if (!isDragging)
             {
-                if (!isDragging) return;
+                // 
+                // 1) ê°€ì¥ìë¦¬ ê°ì§€ ì„ê³„ê°’
+                const int edge = 5;
 
-                Point currentMousePosition = Control.MousePosition;
-                // 2) ÀÌÀü À§Ä¡¿Í Â÷ÀÌ(delta) °è»ê
-                int dx = currentMousePosition.X - lastMousePosition.X;
-                int dy = currentMousePosition.Y - lastMousePosition.Y;
-                // 3) PictureBox À§Ä¡¿¡ µ¨Å¸¸¸Å­ ´õÇØ ºÎµå·´°Ô ÀÌµ¿
+                // 2) e.X, e.Y ê¸°ë°˜ìœ¼ë¡œ ê° ë°©í–¥ ëì— ìˆëŠ”ì§€ íŒë‹¨
+                bool atTop = e.Y <= edge;
+                bool atBottom = e.Y >= pictureBox1.Height - edge;
+                bool atLeft = e.X <= edge;
+                bool atRight = e.X >= pictureBox1.Width - edge;
+
+                // 3) â€œëŒ€ê°ì„ â€ì„ ë¨¼ì € ê°ì§€ (â†˜ï¸â†–ï¸ / â†—ï¸â†™ï¸)
+                if ((atTop && atLeft) || (atBottom && atRight))
+                {
+                    pictureBox1.Cursor = Cursors.SizeNWSE;   // â†˜ï¸â†–ï¸
+                }
+                else if ((atTop && atRight) || (atBottom && atLeft))
+                {
+                    pictureBox1.Cursor = Cursors.SizeNESW;   // â†—ï¸â†™ï¸
+                }
+                // 
+                // 4) ëŒ€ê°ì„ ì´ ì•„ë‹ ë•Œ â€œìˆ˜ì§â€ ë˜ëŠ” â€œìˆ˜í‰â€ í™”ì‚´í‘œ
+                else if (atTop || atBottom)
+                {
+                    pictureBox1.Cursor = Cursors.SizeNS;     // â†•
+                }
+                else if (atLeft || atRight)
+                {
+                    pictureBox1.Cursor = Cursors.SizeWE;     // â†”
+                }
+                // 
+                // 5) ê·¸ ì™¸ ì˜ì—­ì€ ê¸°ë³¸ ì»¤ì„œ
+                else
+                {
+                    pictureBox1.Cursor = Cursors.Default;
+                }
+            }
+            else
+            {
+                // 
+                // ë“œë˜ê·¸ ì¤‘ì¼ ë•Œ ìœ„ì¹˜ ì´ë™ ë¡œì§ (ê¸°ì¡´ ê·¸ëŒ€ë¡œ)
+                Point current = Control.MousePosition;
+                int dx = current.X - lastMousePosition.X;
+                int dy = current.Y - lastMousePosition.Y;
                 pictureBox1.Location = new Point(
                     pictureBox1.Location.X + dx,
                     pictureBox1.Location.Y + dy
                 );
-                // 4) ´ÙÀ½ µ¨Å¸ °è»êÀ» À§ÇØ À§Ä¡ °»½Å
-                lastMousePosition = currentMousePosition;
-                //// PictureBox À§Ä¡ °»½Å
-                //pictureBox1.Location = newLocation;
+                lastMousePosition = current;
             }
         }
 
-        // ¸¶¿ì½º ¹öÆ°À» ³õÀ» ¶§ È£ÃâµÊ
-        // µå·¡±× Á¾·á ¹× ¼±ÅÃ Å×µÎ¸® ÇØÁ¦
+        //
+
+        // ë§ˆìš°ìŠ¤ ë²„íŠ¼ì„ ë†“ì„ ë•Œ í˜¸ì¶œë¨
+        // ë“œë˜ê·¸ ì¢…ë£Œ ë° ì„ íƒ í…Œë‘ë¦¬ í•´ì œ
         private void pictureBox1_MouseUp(object sender, MouseEventArgs e)
         {
             isDragging = false;
 
-            // ¼±ÅÃ ÇØÁ¦ÇÏ°í ½ÍÀ» °æ¿ì ÁÖ¼® ÇØÁ¦
+            // ì„ íƒ í•´ì œí•˜ê³  ì‹¶ì„ ê²½ìš° ì£¼ì„ í•´ì œ
             //showSelectionBorder = false;
 
-            // ´Ù½Ã ±×¸®±â ¿äÃ» (Paint È£Ãâ)
+            // ë‹¤ì‹œ ê·¸ë¦¬ê¸° ìš”ì²­ (Paint í˜¸ì¶œ)
             pictureBox1.Invalidate();
         }
 
   
 
-        // Æû ·Îµå ½Ã ½ÇÇà (ÇÊ¿ä ½Ã ÃÊ±âÈ­ Ã³¸® °¡´É)
+        // í¼ ë¡œë“œ ì‹œ ì‹¤í–‰ (í•„ìš” ì‹œ ì´ˆê¸°í™” ì²˜ë¦¬ ê°€ëŠ¥)
         private void Form1_Load(object sender, EventArgs e)
         {
 
-            // ÇöÀç´Â ºñ¾î ÀÖÀ½
+            // í˜„ì¬ëŠ” ë¹„ì–´ ìˆìŒ
         }
 
-        // pictureBox1ÀÌ ´Ù½Ã ±×·ÁÁú ¶§ È£ÃâµÊ
-        // ¼±ÅÃ Å×µÎ¸®¸¦ ±×¸²
+        // pictureBox1ì´ ë‹¤ì‹œ ê·¸ë ¤ì§ˆ ë•Œ í˜¸ì¶œë¨
+        // ì„ íƒ í…Œë‘ë¦¬ë¥¼ ê·¸ë¦¼
         private void pictureBox1_Paint(object sender, PaintEventArgs e)
         {
             if (showSelectionBorder)
             {
                 using (Pen pen = new Pen(Color.DeepSkyBlue, 2))
                 {
-                    // ½Ç¼±À¸·Î Å×µÎ¸® ±×¸®±â (Á¡¼±Àº DashStyle.Dot µî »ç¿ë °¡´É)
+                    // ì‹¤ì„ ìœ¼ë¡œ í…Œë‘ë¦¬ ê·¸ë¦¬ê¸° (ì ì„ ì€ DashStyle.Dot ë“± ì‚¬ìš© ê°€ëŠ¥)
                     pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Solid;
 
-                    // ±×¸² Å×µÎ¸® »ç°¢Çü Á¤ÀÇ (ÀÌ¹ÌÁö ÀüÃ¼)
+                    // ê·¸ë¦¼ í…Œë‘ë¦¬ ì‚¬ê°í˜• ì •ì˜ (ì´ë¯¸ì§€ ì „ì²´)
                     Rectangle rect = new Rectangle(0, 0, pictureBox1.Width - 1, pictureBox1.Height - 1);
 
-                    // Å×µÎ¸® ±×¸®±â
+                    // í…Œë‘ë¦¬ ê·¸ë¦¬ê¸°
                     e.Graphics.DrawRectangle(pen, rect);
                 }
             }
