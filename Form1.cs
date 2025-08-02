@@ -1,11 +1,14 @@
 using System;
+using System.ComponentModel;
 using System.Drawing;
 using System.Windows.Forms;
+using System.Xml.Linq;
 
 namespace photo
 {
     public partial class Form1 : Form
     {
+        
         // 이미지 드래그 중 여부를 나타내는 플래그
         private bool isDragging = false;
 
@@ -15,16 +18,46 @@ namespace photo
         // 선택 테두리를 표시할지 여부 (마우스 클릭 시 true)
         private bool showSelectionBorder = false;
 
+        private Point lastMousePosition;
+
         public Form1()
         {
             InitializeComponent();
 
+         
+
             // pictureBox1에 커스텀 그리기(Paint) 이벤트 연결
             pictureBox1.Paint += pictureBox1_Paint;
+
+            
+            // PictureBox 드래그 처리 이벤트 연결(이진희)
+            pictureBox1.MouseDown += pictureBox1_MouseDown;
+            pictureBox1.MouseMove += pictureBox1_MouseMove;
+            pictureBox1.MouseUp += pictureBox1_MouseUp;
+
+            // 폼(및 지식컨트롤) 클릭 시 테두리 해제 이벤트 연결(이진희)
+            this.MouseDown += Form1_MouseDown;
+
+            // 재귀적으로 모든 지식 컨트롤에도 연결합니둥(이진희)
+            HookMouseDown(this);
+        }
+
+
+        //재귀적으로 parent와 그 자식 컨트롤들에 Form1_MouseDown 훅을 겁니둥.(이진희)
+        private void HookMouseDown(Control parent)
+        {
+            foreach (Control ctl in parent.Controls)
+            {
+                if (ctl != pictureBox1)
+                    ctl.MouseDown += Form1_MouseDown;
+                if (ctl.HasChildren)
+                    HookMouseDown(ctl);
+            }
         }
 
         private void button4_Click(object sender, EventArgs e)
         {
+           
             // 미사용 버튼 - 추후 기능 연결 가능
         }
 
@@ -32,7 +65,13 @@ namespace photo
         // pictureBox의 이미지 초기화
         private void btn_NewFile_Click(object sender, EventArgs e)
         {
-            pictureBox1.Image = null;
+            if (pictureBox1.Image != null)
+            {
+                pictureBox1.Image.Dispose(); // 기존 이미지 메모리 해제
+                pictureBox1.Image = null;
+                showSelectionBorder = false; // 이미지 초기화 시 테두리도 숨김
+                pictureBox1.Invalidate(); // 다시 그리기 요청
+            }
         }
 
         // [열기] 버튼 클릭 시 실행
@@ -58,6 +97,7 @@ namespace photo
                     pictureBox1.SizeMode = PictureBoxSizeMode.AutoSize;
                     pictureBox1.Size = img.Size;
 
+
                     // pictureBox 위치 설정 (좌측 상단 여백)
                     pictureBox1.Location = new Point(10, 10);
                 }
@@ -72,6 +112,29 @@ namespace photo
         private void btn_Save_Click(object sender, EventArgs e)
         {
             // TODO: 저장 기능 구현
+            MessageBox.Show("저장 기능은 아직 구현되지 않았습니다.");
+        }
+        // 수정: 폼 또는 지식컨트롤 클릭시 호출, 클릭지점을 폼(client) 좌표로 변환하여 pictureBox외부검사(이진희)
+        private void Form1_MouseDown(object sender, MouseEventArgs e)
+        {
+            Point clickPt;
+            if (sender == this)
+            {
+                clickPt = e.Location;
+            }
+            else
+            {
+                Control ctl = (Control)sender;
+                clickPt = this.PointToClient(ctl.PointToScreen(e.Location));
+            }
+            // pictureBox1 밖을 클릭했으면 테두리 끔
+            if (pictureBox1.Image != null
+                && showSelectionBorder
+                && !pictureBox1.Bounds.Contains(e.Location))    // <- 수정: clicpt 사용
+            {
+                showSelectionBorder = false;
+                pictureBox1.Invalidate();
+            }
         }
 
         // 마우스 버튼을 누를 때 호출됨
@@ -84,6 +147,10 @@ namespace photo
                 clickOffset = e.Location;   // 마우스 클릭 좌표 저장
                 showSelectionBorder = true; // 테두리 표시 ON
                 pictureBox1.Invalidate();   // 다시 그리기 요청 (Paint 호출)
+
+                // 드래그 시작 시점의 마우스 스크린 좌표 저장
+
+                lastMousePosition = Control.MousePosition;
             }
         }
 
@@ -92,13 +159,21 @@ namespace photo
         {
             if (isDragging)
             {
-                // 기존 위치에서 마우스 이동만큼 offset 적용
-                Point newLocation = pictureBox1.Location;
-                newLocation.X += e.X - clickOffset.X;
-                newLocation.Y += e.Y - clickOffset.Y;
+                if (!isDragging) return;
 
-                // PictureBox 위치 갱신
-                pictureBox1.Location = newLocation;
+                Point currentMousePosition = Control.MousePosition;
+                // 2) 이전 위치와 차이(delta) 계산
+                int dx = currentMousePosition.X - lastMousePosition.X;
+                int dy = currentMousePosition.Y - lastMousePosition.Y;
+                // 3) PictureBox 위치에 델타만큼 더해 부드럽게 이동
+                pictureBox1.Location = new Point(
+                    pictureBox1.Location.X + dx,
+                    pictureBox1.Location.Y + dy
+                );
+                // 4) 다음 델타 계산을 위해 위치 갱신
+                lastMousePosition = currentMousePosition;
+                //// PictureBox 위치 갱신
+                //pictureBox1.Location = newLocation;
             }
         }
 
@@ -109,15 +184,18 @@ namespace photo
             isDragging = false;
 
             // 선택 해제하고 싶을 경우 주석 해제
-            showSelectionBorder = false;
+            //showSelectionBorder = false;
 
             // 다시 그리기 요청 (Paint 호출)
             pictureBox1.Invalidate();
         }
 
+  
+
         // 폼 로드 시 실행 (필요 시 초기화 처리 가능)
         private void Form1_Load(object sender, EventArgs e)
         {
+
             // 현재는 비어 있음
         }
 
