@@ -176,15 +176,12 @@
             // pictureBox1
             // 
             pictureBox1.BackgroundImageLayout = ImageLayout.Stretch;
-            pictureBox1.Location = new Point(61, 28);
+            pictureBox1.Location = new Point(48, 48);
             pictureBox1.Name = "pictureBox1";
             pictureBox1.Size = new Size(472, 427);
             pictureBox1.SizeMode = PictureBoxSizeMode.AutoSize;
             pictureBox1.TabIndex = 0;
             pictureBox1.TabStop = false;
-           // pictureBox1.MouseDown += pictureBox1_MouseDown;
-          //  pictureBox1.MouseMove += pictureBox1_MouseMove;
-          //  pictureBox1.MouseUp += pictureBox1_MouseUp;
             // 
             // tabControl1
             // 

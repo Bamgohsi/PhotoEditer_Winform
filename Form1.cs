@@ -9,7 +9,7 @@ namespace photo
 {
     public partial class Form1 : Form
     {
-        
+
         // 이미지 드래그 중 여부를 나타내는 플래그
         private bool isDragging = false;
 
@@ -21,16 +21,26 @@ namespace photo
 
         private Point lastMousePosition;
 
+        // 1) 크기조절 방향 및 상태 변수 선언,리사이즈 방향 및 상태 변수(이진희)
+        private enum ResizeDirection { None, Left, Right, Top, Bottom, TopLeft, TopRight, BottomLeft, BottomRight }
+        private ResizeDirection resizeDir = ResizeDirection.None;
+        private bool isResizing = false;
+        private Point resizeStartPoint; // 리사이즈 시작 좌표(이진희)
+        private Rectangle originalBounds; // 리사이즈 시작시 PictureBox 원래 위치/크기(이진희)
+                                          // 기존 멤버 변수 아래쯤
+        private Point resizeStartScreenPoint;  // ★추가: 리사이즈 시작 시점의 스크린 좌표
+
+
         public Form1()
         {
             InitializeComponent();
 
-         
+
 
             // pictureBox1에 커스텀 그리기(Paint) 이벤트 연결
             pictureBox1.Paint += pictureBox1_Paint;
 
-            
+
             // PictureBox 드래그 처리 이벤트 연결(이진희)
             pictureBox1.MouseDown += pictureBox1_MouseDown;
             pictureBox1.MouseMove += pictureBox1_MouseMove;
@@ -58,7 +68,7 @@ namespace photo
 
         private void button4_Click(object sender, EventArgs e)
         {
-           
+
             // 미사용 버튼 - 추후 기능 연결 가능
         }
 
@@ -97,11 +107,11 @@ namespace photo
                     // 이미지 크기에 맞게 PictureBox 크기 조절
                     //사진이 크게불러와져서 size를 AutoSize에서 Zoom으로 변경 추후에 필요시 다시 변경(이진희)
                     pictureBox1.SizeMode = PictureBoxSizeMode.Zoom;
-                   // pictureBox1.Size = img.Size;
+                    // pictureBox1.Size = img.Size;
 
 
                     // pictureBox 위치 설정 (좌측 상단 여백)
-                   // pictureBox1.Location = new Point(10, 10);(여백이 보여 주석처리함(이진희)
+                    // pictureBox1.Location = new Point(10, 10);(여백이 보여 주석처리함(이진희)
                 }
                 catch (Exception ex)
                 {
@@ -138,68 +148,137 @@ namespace photo
                 pictureBox1.Invalidate();
             }
         }
-
-        // 마우스 버튼을 누를 때 호출됨
-        // 드래그 시작 처리 및 선택 테두리 표시
         private void pictureBox1_MouseDown(object sender, MouseEventArgs e)
         {
             if (pictureBox1.Image != null && e.Button == MouseButtons.Left)
             {
-                isDragging = true;          // 드래그 시작
-                clickOffset = e.Location;   // 마우스 클릭 좌표 저장
-                showSelectionBorder = true; // 테두리 표시 ON
-                pictureBox1.Invalidate();   // 다시 그리기 요청 (Paint 호출)
-
-                // 드래그 시작 시점의 마우스 스크린 좌표 저장
-
-                lastMousePosition = Control.MousePosition;
-            }
-        }
-        //MousteMove에서 커서변경(끝/대각선/사이드)
-        private void pictureBox1_MouseMove(object sender, MouseEventArgs e)
-        {
-            if (!isDragging)
-            {
-                // 
-                // 1) 가장자리 감지 임계값
                 const int edge = 5;
-
-                // 2) e.X, e.Y 기반으로 각 방향 끝에 있는지 판단
                 bool atTop = e.Y <= edge;
                 bool atBottom = e.Y >= pictureBox1.Height - edge;
                 bool atLeft = e.X <= edge;
                 bool atRight = e.X >= pictureBox1.Width - edge;
 
-                // 3) “대각선”을 먼저 감지 (↘️↖️ / ↗️↙️)
-                if ((atTop && atLeft) || (atBottom && atRight))
+                // 1) 리사이즈 방향 판별
+                if (atTop && atLeft) resizeDir = ResizeDirection.TopLeft;
+                else if (atTop && atRight) resizeDir = ResizeDirection.TopRight;
+                else if (atBottom && atLeft) resizeDir = ResizeDirection.BottomLeft;
+                else if (atBottom && atRight) resizeDir = ResizeDirection.BottomRight;
+                else if (atTop) resizeDir = ResizeDirection.Top;
+                else if (atBottom) resizeDir = ResizeDirection.Bottom;
+                else if (atLeft) resizeDir = ResizeDirection.Left;
+                else if (atRight) resizeDir = ResizeDirection.Right;
+                else resizeDir = ResizeDirection.None;
+
+                if (resizeDir != ResizeDirection.None)
                 {
-                    pictureBox1.Cursor = Cursors.SizeNWSE;   // ↘️↖️
+                    // 2) 리사이즈 시작
+                    isResizing = true;
+                    // 클라이언트+스크린 기준(이진희)
+                    resizeStartScreenPoint = Control.MousePosition;
+                    // 시작 크기 , 위치저장(이진희)
+                    originalBounds = pictureBox1.Bounds;
+                
+                    return;
                 }
-                else if ((atTop && atRight) || (atBottom && atLeft))
-                {
-                    pictureBox1.Cursor = Cursors.SizeNESW;   // ↗️↙️
-                }
-                // 
-                // 4) 대각선이 아닐 때 “수직” 또는 “수평” 화살표
-                else if (atTop || atBottom)
-                {
-                    pictureBox1.Cursor = Cursors.SizeNS;     // ↕
-                }
-                else if (atLeft || atRight)
-                {
-                    pictureBox1.Cursor = Cursors.SizeWE;     // ↔
-                }
-                // 
-                // 5) 그 외 영역은 기본 커서
-                else
-                {
-                    pictureBox1.Cursor = Cursors.Default;
-                }
+
+                // 기존 이동(드래그) 로직
+                isDragging = true;
+                clickOffset = e.Location;
+                showSelectionBorder = true;
+                pictureBox1.Invalidate();
+                lastMousePosition = Control.MousePosition;
             }
+        }
+
+        private void pictureBox1_MouseMove(object sender, MouseEventArgs e)
+        {
+            // ★1) 리사이즈 중이면 스크린 좌표 차이로 계산
+            if (isResizing)
+            {
+                //스크린 좌표 수정(이진희)
+                Point curScreen = Control.MousePosition;
+                int dx = curScreen.X - resizeStartScreenPoint.X;
+                int dy = curScreen.Y - resizeStartScreenPoint.Y;
+
+                // 기존 originalBounds 기반으로 newBounds 계산 코드수정(이진희)
+                Rectangle nb = originalBounds;
+                switch (resizeDir)
+                {
+                    case ResizeDirection.Left:
+                        nb.X += dx;
+                        nb.Width = originalBounds.Width - dx;
+                        break;
+                    case ResizeDirection.Right:
+                        nb.Width = originalBounds.Width + dx;
+                        break;
+                    case ResizeDirection.Top:
+                        nb.Y += dy;
+                        nb.Height = originalBounds.Height - dy;
+                        break;
+                    case ResizeDirection.Bottom:
+                        nb.Height = originalBounds.Height + dy;
+                        break;
+                    case ResizeDirection.TopLeft:
+                        nb.X += dx;
+                        nb.Width = originalBounds.Width - dx;
+                        nb.Y += dy;
+                        nb.Height = originalBounds.Height - dy;
+                        break;
+                    case ResizeDirection.TopRight:
+                        nb.Width = originalBounds.Width + dx;
+                        nb.Y += dy;
+                        nb.Height = originalBounds.Height - dy;
+                        break;
+                    case ResizeDirection.BottomLeft:
+                        nb.X += dx;
+                        nb.Width = originalBounds.Width - dx;
+                        nb.Height = originalBounds.Height + dy;
+                        break;
+                    case ResizeDirection.BottomRight:
+                        nb.Width = originalBounds.Width + dx;
+                        nb.Height = originalBounds.Height + dy;
+                        break;
+                }
+
+                // 최소 크기 제한
+                if (nb.Width < 20) nb.Width = 20;
+                if (nb.Height < 20) nb.Height = 20;
+
+                //flicker 방지용 Layout suspend/resume (이진희)
+                pictureBox1.SuspendLayout();
+                pictureBox1.Bounds = nb;
+                pictureBox1.ResumeLayout();
+
+                return;
+            }
+
+            // 2) 리사이즈가 아니고 드래그도 아닐 때 → 커서 모양 변경
+            const int edge = 5;
+            bool atTop = e.Y <= edge;
+            bool atBottom = e.Y >= pictureBox1.Height - edge;
+            bool atLeft = e.X <= edge;
+            bool atRight = e.X >= pictureBox1.Width - edge;
+
+            if (!isDragging)
+            {
+                if (atTop && atLeft)
+                    pictureBox1.Cursor = Cursors.SizeNWSE;
+                else if (atTop && atRight)
+                    pictureBox1.Cursor = Cursors.SizeNESW;
+                else if (atBottom && atLeft)
+                    pictureBox1.Cursor = Cursors.SizeNESW;
+                else if (atBottom && atRight)
+                    pictureBox1.Cursor = Cursors.SizeNWSE;
+                else if (atTop || atBottom)
+                    pictureBox1.Cursor = Cursors.SizeNS;
+                else if (atLeft || atRight)
+                    pictureBox1.Cursor = Cursors.SizeWE;
+                else
+                    pictureBox1.Cursor = Cursors.Default;
+            }
+            // 3) 드래그 중이면 이동
             else
             {
-                // 
-                // 드래그 중일 때 위치 이동 로직 (기존 그대로)
                 Point current = Control.MousePosition;
                 int dx = current.X - lastMousePosition.X;
                 int dy = current.Y - lastMousePosition.Y;
@@ -211,7 +290,8 @@ namespace photo
             }
         }
 
-        //
+
+
 
         // 마우스 버튼을 놓을 때 호출됨
         // 드래그 종료 및 선택 테두리 해제
@@ -222,11 +302,15 @@ namespace photo
             // 선택 해제하고 싶을 경우 주석 해제
             //showSelectionBorder = false;
 
+            isResizing = false;
+
+            resizeDir = ResizeDirection.None;
+
             // 다시 그리기 요청 (Paint 호출)
             pictureBox1.Invalidate();
         }
 
-  
+
 
         // 폼 로드 시 실행 (필요 시 초기화 처리 가능)
         private void Form1_Load(object sender, EventArgs e)
