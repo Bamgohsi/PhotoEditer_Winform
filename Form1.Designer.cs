@@ -28,17 +28,6 @@
         /// </summary>
         private void InitializeComponent()
         {
-            groupBox1 = new GroupBox();
-            button10 = new Button();
-            button9 = new Button();
-            button8 = new Button();
-            button7 = new Button();
-            button6 = new Button();
-            button5 = new Button();
-            button4 = new Button();
-            button3 = new Button();
-            button2 = new Button();
-            button1 = new Button();
             tapPage = new TabPage();
             tabControl1 = new TabControl();
             menuStrip1 = new MenuStrip();
@@ -55,114 +44,10 @@
             btn_Save = new Button();
             btn_NewFile = new Button();
             btn_Open = new Button();
-            groupBox1.SuspendLayout();
             tabControl1.SuspendLayout();
             menuStrip1.SuspendLayout();
             groupBox2.SuspendLayout();
             SuspendLayout();
-            // 
-            // groupBox1
-            // 
-            groupBox1.Controls.Add(button10);
-            groupBox1.Controls.Add(button9);
-            groupBox1.Controls.Add(button8);
-            groupBox1.Controls.Add(button7);
-            groupBox1.Controls.Add(button6);
-            groupBox1.Controls.Add(button5);
-            groupBox1.Controls.Add(button4);
-            groupBox1.Controls.Add(button3);
-            groupBox1.Controls.Add(button2);
-            groupBox1.Controls.Add(button1);
-            groupBox1.Location = new Point(12, 80);
-            groupBox1.Name = "groupBox1";
-            groupBox1.Size = new Size(106, 358);
-            groupBox1.TabIndex = 0;
-            groupBox1.TabStop = false;
-            // 
-            // button10
-            // 
-            button10.Location = new Point(54, 186);
-            button10.Name = "button10";
-            button10.Size = new Size(42, 35);
-            button10.TabIndex = 0;
-            button10.UseVisualStyleBackColor = true;
-            button10.Click += button4_Click;
-            // 
-            // button9
-            // 
-            button9.Location = new Point(6, 186);
-            button9.Name = "button9";
-            button9.Size = new Size(42, 35);
-            button9.TabIndex = 0;
-            button9.UseVisualStyleBackColor = true;
-            // 
-            // button8
-            // 
-            button8.Location = new Point(54, 145);
-            button8.Name = "button8";
-            button8.Size = new Size(42, 35);
-            button8.TabIndex = 0;
-            button8.UseVisualStyleBackColor = true;
-            button8.Click += button4_Click;
-            // 
-            // button7
-            // 
-            button7.Location = new Point(6, 145);
-            button7.Name = "button7";
-            button7.Size = new Size(42, 35);
-            button7.TabIndex = 0;
-            button7.UseVisualStyleBackColor = true;
-            // 
-            // button6
-            // 
-            button6.Location = new Point(54, 104);
-            button6.Name = "button6";
-            button6.Size = new Size(42, 35);
-            button6.TabIndex = 0;
-            button6.UseVisualStyleBackColor = true;
-            button6.Click += button4_Click;
-            // 
-            // button5
-            // 
-            button5.Location = new Point(6, 104);
-            button5.Name = "button5";
-            button5.Size = new Size(42, 35);
-            button5.TabIndex = 0;
-            button5.UseVisualStyleBackColor = true;
-            // 
-            // button4
-            // 
-            button4.Location = new Point(54, 63);
-            button4.Name = "button4";
-            button4.Size = new Size(42, 35);
-            button4.TabIndex = 0;
-            button4.UseVisualStyleBackColor = true;
-            button4.Click += button4_Click;
-            // 
-            // button3
-            // 
-            button3.Location = new Point(6, 63);
-            button3.Name = "button3";
-            button3.Size = new Size(42, 35);
-            button3.TabIndex = 0;
-            button3.UseVisualStyleBackColor = true;
-            button3.Click += button3_Click;
-            // 
-            // button2
-            // 
-            button2.Location = new Point(54, 22);
-            button2.Name = "button2";
-            button2.Size = new Size(42, 35);
-            button2.TabIndex = 0;
-            button2.UseVisualStyleBackColor = true;
-            // 
-            // button1
-            // 
-            button1.Location = new Point(6, 22);
-            button1.Name = "button1";
-            button1.Size = new Size(42, 35);
-            button1.TabIndex = 0;
-            button1.UseVisualStyleBackColor = true;
             // 
             // tapPage
             // 
@@ -170,17 +55,18 @@
             tapPage.Location = new Point(4, 24);
             tapPage.Name = "tapPage";
             tapPage.Padding = new Padding(3);
-            tapPage.Size = new Size(581, 330);
+            tapPage.Size = new Size(1371, 798);
             tapPage.TabIndex = 1;
             tapPage.Text = "tp1";
             // 
             // tabControl1
             // 
+            tabControl1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             tabControl1.Controls.Add(tapPage);
             tabControl1.Location = new Point(134, 71);
             tabControl1.Name = "tabControl1";
             tabControl1.SelectedIndex = 0;
-            tabControl1.Size = new Size(589, 358);
+            tabControl1.Size = new Size(1379, 826);
             tabControl1.TabIndex = 1;
             // 
             // menuStrip1
@@ -188,7 +74,7 @@
             menuStrip1.Items.AddRange(new ToolStripItem[] { toolStrip_File, toolStripMenuItem3 });
             menuStrip1.Location = new Point(0, 0);
             menuStrip1.Name = "menuStrip1";
-            menuStrip1.Size = new Size(800, 24);
+            menuStrip1.Size = new Size(1711, 24);
             menuStrip1.TabIndex = 2;
             menuStrip1.Text = "menuStrip1";
             // 
@@ -228,6 +114,7 @@
             // 
             // groupBox2
             // 
+            groupBox2.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             groupBox2.Controls.Add(button12);
             groupBox2.Controls.Add(button11);
             groupBox2.Controls.Add(btnDltTabPage);
@@ -235,9 +122,9 @@
             groupBox2.Controls.Add(btn_Save);
             groupBox2.Controls.Add(btn_NewFile);
             groupBox2.Controls.Add(btn_Open);
-            groupBox2.Location = new Point(12, 24);
+            groupBox2.Location = new Point(12, 27);
             groupBox2.Name = "groupBox2";
-            groupBox2.Size = new Size(776, 41);
+            groupBox2.Size = new Size(1505, 41);
             groupBox2.TabIndex = 3;
             groupBox2.TabStop = false;
             // 
@@ -315,16 +202,14 @@
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(800, 450);
+            ClientSize = new Size(1711, 954);
             Controls.Add(groupBox2);
             Controls.Add(tabControl1);
-            Controls.Add(groupBox1);
             Controls.Add(menuStrip1);
             MainMenuStrip = menuStrip1;
             Name = "Form1";
             Text = "Form1";
             Load += Form1_Load;
-            groupBox1.ResumeLayout(false);
             tabControl1.ResumeLayout(false);
             menuStrip1.ResumeLayout(false);
             menuStrip1.PerformLayout();
@@ -334,21 +219,9 @@
         }
 
         #endregion
-
-        private GroupBox groupBox1;
-        private Button button4;
-        private Button button3;
-        private Button button2;
-        private Button button1;
         private TabPage tapPage;
         private TabControl tabControl1;
         private Button btn_Road;
-        private Button button10;
-        private Button button9;
-        private Button button8;
-        private Button button7;
-        private Button button6;
-        private Button button5;
         private MenuStrip menuStrip1;
         private ToolStripMenuItem toolStrip_File;
         private ToolStripMenuItem toolStrip_Open;

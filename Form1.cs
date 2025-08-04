@@ -1,13 +1,17 @@
-using System;
-using System.Drawing;
 using System.Reflection;
-using System.Reflection.Metadata.Ecma335;
 using System.Windows.Forms;
 
 namespace photo
 {
     public partial class Form1 : Form
     {
+        // Constants for layout
+        private const int LeftMargin = 20; // 폼 왼쪽 여백
+        private const int TopMargin = 90; // 폼 상단 여백 (tabControl 아래)
+        private const int PanelWidth = 300; // 오른쪽 패널의 고정 너비
+        private const int PanelRightMargin = 20; // 오른쪽 패널의 폼 오른쪽 여백
+        private const int GapBetweenPictureBoxAndPanel = 20; // pictureBox1과 오른쪽 패널 사이의 간격
+        private const int BottomMargin = 20; // 폼 하단 여백
         // 이미지 원본을 저장할 리스트
         private List<(PictureBox pb, Bitmap original)> imageList = new List<(PictureBox, Bitmap)>();
 
@@ -34,15 +38,61 @@ namespace photo
         // 선택 테두리를 표시할지 여부 (마우스 클릭 시 true)
         private bool showSelectionBorder = false;
 
+        // 동적으로 생성할 버튼과 패널 배열
+        private Button[] dynamicButtons;
+        private Panel[] dynamicPanels;
 
-
+        // 현재 표시된 패널을 추적하는 변수
+        private Panel currentVisiblePanel = null;
         public Form1()
         {
             InitializeComponent();
 
-            // pictureBox1에 커스텀 그리기(Paint) 이벤트 연결
+            InitializeDynamicControls(); // This will also use the updated client size for panel positioning
+            this.Resize += Form1_Resize;
+            this.WindowState = FormWindowState.Maximized; // 실행 시 전체화면
+
+
 
         }
+        private const int LeftPanelWidth = 80; // 왼쪽 버튼들이 차지하는 영역 너비
+
+        private void Form1_Resize(object sender, EventArgs e)
+        {
+            // 오른쪽 패널 크기 및 위치 조정
+            if (dynamicPanels != null)
+            {
+                Point panelLocation = new Point(
+                    this.ClientSize.Width - (PanelWidth + PanelRightMargin),
+                    TopMargin
+                );
+                Size panelSize = new Size(
+                    PanelWidth,
+                    this.ClientSize.Height - TopMargin - BottomMargin
+                );
+
+                foreach (var panel in dynamicPanels)
+                {
+                    panel.Location = panelLocation;
+                    panel.Size = panelSize;
+                }
+            }
+
+            // 왼쪽 공간 확보: LeftMargin + 왼쪽 버튼들 + 중간 여백
+            int totalLeft = LeftMargin + LeftPanelWidth + GapBetweenPictureBoxAndPanel;
+
+            // 탭컨트롤 위치 및 크기 조정
+            tabControl1.Location = new Point(totalLeft, TopMargin);
+            tabControl1.Size = new Size(
+                this.ClientSize.Width - totalLeft - PanelWidth - PanelRightMargin-15,
+                this.ClientSize.Height - TopMargin - BottomMargin
+            );
+
+            // 상단 그룹박스 너비 조정
+            groupBox2.Width = this.ClientSize.Width - 24;
+        }
+
+
 
         private void button4_Click(object sender, EventArgs e)
         {
@@ -393,7 +443,7 @@ namespace photo
                 pb.Image?.Dispose(); // 이전 이미지 제거
                 pb.Image = ResizeImageHighQuality(original, new Size(newWidth, newHeight));
                 pb.Size = pb.Image.Size;
-                
+
 
             }
 
@@ -412,6 +462,138 @@ namespace photo
                 currentTab.AutoScrollMinSize = new Size(maxRight + 50, maxBottom + 50);
             }
         }
+            /// <summary>
+            /// 버튼과 패널을 동적으로 생성하고 초기화합니다.
+            /// </summary>
+        private void InitializeDynamicControls()
+        {
+            // 버튼 관련 설정
+            int buttonWidth = 40;
+            int buttonHeight = 40;
+            int spacing = 10;
+            int startX = 15;
+            int startY = 95;
+            int columns = 2; // 2열로 배치
+            int buttonCount = 10; // 총 버튼 개수
+
+            dynamicButtons = new Button[buttonCount];
+
+            // 2열 5행으로 버튼 배치
+            for (int i = 0; i < buttonCount; i++)
+            {
+                Button btn = new Button();
+                btn.Text = $"{i + 1}"; // 버튼 텍스트를 숫자로 설정
+                btn.Size = new Size(buttonWidth, buttonHeight);
+
+                // 버튼 위치 계산 (2열 5행)
+                int col = i % columns;
+                int row = i / columns;
+                btn.Location = new Point(startX + col * (buttonWidth + spacing),
+                                         startY + row * (buttonHeight + spacing));
+
+                btn.Tag = i; // 버튼에 인덱스 저장
+                btn.Click += Button_Click; // 클릭 이벤트 핸들러 연결
+                this.Controls.Add(btn);
+                dynamicButtons[i] = btn;
+            }
+
+            // 패널 관련 설정
+            int panelCount = 10;
+            dynamicPanels = new Panel[panelCount];
+
+            // 패널 위치는 오른쪽 상단으로 고정
+            // Calculate panel location based on current client size
+            Point panelLocation = new Point(this.ClientSize.Width - (PanelWidth + PanelRightMargin), TopMargin);
+            Size panelSize = new Size(PanelWidth, this.ClientSize.Height - TopMargin - BottomMargin);
+
+            for (int i = 0; i < panelCount; i++)
+            {
+                Panel panel = new Panel()
+                {
+                    Location = panelLocation, // Use the calculated location
+                    Size = panelSize,         // Use the calculated size
+                    Visible = false,
+                    BorderStyle = BorderStyle.FixedSingle // 패널 경계선 추가
+                };
+
+                // 패널에 라벨 추가
+                panel.Controls.Add(new Label() { Text = $"편집 속성 {i + 1}", Location = new Point(10, 10) });
+
+                // 패널에 Paint 이벤트 핸들러 추가
+                panel.Paint += Panel_Paint;
+
+                this.Controls.Add(panel);
+                dynamicPanels[i] = panel; // 생성한 패널을 배열에 저장
+            }
+        }
+        // 모든 동적 버튼의 클릭 이벤트를 처리하는 단일 핸들러
+        private void Button_Click(object sender, EventArgs e)
+        {
+            Button clickedButton = sender as Button;
+            if (clickedButton != null)
+            {
+                int index = (int)clickedButton.Tag; // 버튼의 Tag에서 인덱스 가져오기
+
+                // 패널이 없는 버튼은 아무 동작도 하지 않음
+                if (index >= dynamicPanels.Length)
+                {
+                    return;
+                }
+
+                Panel targetPanel = dynamicPanels[index];
+                Panel previousVisiblePanel = currentVisiblePanel;
+
+                if (currentVisiblePanel == targetPanel)
+                {
+                    // 현재 보이는 패널과 클릭된 패널이 같으면 토글 (숨김)
+                    currentVisiblePanel.Visible = false;
+                    currentVisiblePanel = null;
+                }
+                else
+                {
+                    // 다른 패널이 보이고 있다면 숨기기
+                    if (currentVisiblePanel != null)
+                    {
+                        currentVisiblePanel.Visible = false;
+                    }
+
+                    // 클릭된 버튼에 해당하는 패널만 보이게 하기
+                    targetPanel.Visible = true;
+                    currentVisiblePanel = targetPanel;
+                }
+
+                // 이전 패널과 새 패널의 Paint 이벤트를 강제로 호출하여 테두리를 갱신
+                if (previousVisiblePanel != null)
+                {
+                    previousVisiblePanel.Invalidate();
+                }
+                if (currentVisiblePanel != null)
+                {
+                    currentVisiblePanel.Invalidate();
+                }
+            }
+        }
+        /// <summary>
+        /// 패널의 Paint 이벤트 핸들러: 활성화된 패널에 테두리를 그립니다.
+        /// </summary>
+        private void Panel_Paint(object sender, PaintEventArgs e)
+        {
+            Panel paintedPanel = sender as Panel;
+
+            // 현재 보이는 패널인 경우에만 테두리 그리기
+            if (paintedPanel != null && paintedPanel == currentVisiblePanel)
+            {
+                // 테두리 색상을 검은색으로 변경
+                using (Pen pen = new Pen(Color.Black, 1))
+                {
+                    pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Solid;
+                    // 패널 경계에 테두리 그리기
+                    Rectangle rect = new Rectangle(0, 0, paintedPanel.Width - 1, paintedPanel.Height - 1);
+                    e.Graphics.DrawRectangle(pen, rect);
+                }
+            }
+        }
+
     }
 }
 
