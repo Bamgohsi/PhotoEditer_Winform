@@ -48,6 +48,8 @@
             toolStripp_Save = new ToolStripMenuItem();
             toolStripMenuItem3 = new ToolStripMenuItem();
             groupBox2 = new GroupBox();
+            button12 = new Button();
+            button11 = new Button();
             btnDltTabPage = new Button();
             btnNewTabPage = new Button();
             btn_Save = new Button();
@@ -144,6 +146,7 @@
             button3.Size = new Size(42, 35);
             button3.TabIndex = 0;
             button3.UseVisualStyleBackColor = true;
+            button3.Click += button3_Click;
             // 
             // button2
             // 
@@ -225,6 +228,8 @@
             // 
             // groupBox2
             // 
+            groupBox2.Controls.Add(button12);
+            groupBox2.Controls.Add(button11);
             groupBox2.Controls.Add(btnDltTabPage);
             groupBox2.Controls.Add(btnNewTabPage);
             groupBox2.Controls.Add(btn_Save);
@@ -235,6 +240,26 @@
             groupBox2.Size = new Size(776, 41);
             groupBox2.TabIndex = 3;
             groupBox2.TabStop = false;
+            // 
+            // button12
+            // 
+            button12.Location = new Point(219, 12);
+            button12.Name = "button12";
+            button12.Size = new Size(29, 23);
+            button12.TabIndex = 2;
+            button12.Text = "축";
+            button12.UseVisualStyleBackColor = true;
+            button12.Click += button12_Click;
+            // 
+            // button11
+            // 
+            button11.Location = new Point(184, 12);
+            button11.Name = "button11";
+            button11.Size = new Size(29, 23);
+            button11.TabIndex = 2;
+            button11.Text = "확";
+            button11.UseVisualStyleBackColor = true;
+            button11.Click += button11_Click;
             // 
             // btnDltTabPage
             // 
@@ -336,5 +361,7 @@
         private Button btn_NewFile;
         private Button btnNewTabPage;
         private Button btnDltTabPage;
+        private Button button12;
+        private Button button11;
     }
 }

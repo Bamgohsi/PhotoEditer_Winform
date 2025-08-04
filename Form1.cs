@@ -8,6 +8,16 @@ namespace photo
 {
     public partial class Form1 : Form
     {
+        // 이미지 원본을 저장할 리스트
+        private List<(PictureBox pb, Bitmap original)> imageList = new List<(PictureBox, Bitmap)>();
+
+        // 현재 스케일 비율 (기본 1.0f)
+        private float currentScale = 1.0f;
+
+        // 이미지를 제한 할 변수 추가
+        private const float MIN_SCALE = 0.1f;
+        private const float MAX_SCALE = 5.0f;
+
 
         //새로운 탭 번호를 세어주는 변수
         private int tabCount = 2;
@@ -23,6 +33,8 @@ namespace photo
 
         // 선택 테두리를 표시할지 여부 (마우스 클릭 시 true)
         private bool showSelectionBorder = false;
+
+
 
         public Form1()
         {
@@ -69,6 +81,8 @@ namespace photo
             openFileDialog.Title = "이미지 열기";
             openFileDialog.Filter = "이미지 파일|*.jpg;*.jpeg;*.png;*.bmp;*.gif";
 
+            
+
             if (openFileDialog.ShowDialog() == DialogResult.OK)
             {
                 string filePath = openFileDialog.FileName;
@@ -82,6 +96,16 @@ namespace photo
                     pb.SizeMode = PictureBoxSizeMode.AutoSize;
                     pb.Location = new Point(10, 30 + X); // 위치는 아래 함수 참고
                     EnableDoubleBuffering(pb);
+
+                    using (var original = new Bitmap(Image.FromFile(filePath)))
+                    {
+                        Bitmap originalCopy = new Bitmap(original); // 이미지 원본 복사
+                        pb.Image = new Bitmap(originalCopy);        // 화면 표시용 이미지
+                        pb.Size = pb.Image.Size;
+
+                        // 리스트에 원본 저장
+                        imageList.Add((pb, originalCopy));
+                    }
 
                     pb.Image = Image.FromFile(filePath);
                     pb.Size = pb.Image.Size;
@@ -196,6 +220,7 @@ namespace photo
         }
 
         int tabNumber;
+
         private Stack<int> deletedTabNumbers = new Stack<int>();  // 삭제된 탭 번호만 저장
         private void btnNewTabPage_Click(object sender, EventArgs e)       //탭페이지 추가 버튼 이벤트         
         {
@@ -305,6 +330,87 @@ namespace photo
                 deletedTabNumbers.Clear();
             }
 
+        }
+
+        private void button3_Click(object sender, EventArgs e)  // 탭 페이지 안에 텍스트 추가
+        {
+
+        }
+
+        private Bitmap ResizeImageHighQuality(Image img, Size size)
+        {
+            Bitmap result = new Bitmap(size.Width, size.Height);
+            using (Graphics g = Graphics.FromImage(result))
+            {
+                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+                g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+                g.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
+                g.Clear(Color.White);
+                g.DrawImage(img, new Rectangle(0, 0, size.Width, size.Height));
+            }
+            return result;
+        }
+
+
+
+
+        private void button11_Click(object sender, EventArgs e)     //확대
+        {
+            float nextScale = currentScale * 1.2f;
+            if (nextScale > MAX_SCALE)
+            {
+                return;
+            }
+
+            currentScale = nextScale;
+            ApplyScaling();
+
+        }
+
+
+
+
+
+
+        private void button12_Click(object sender, EventArgs e)      //축소
+        {
+            float nextScale = currentScale * 0.8f;
+            if (nextScale < MIN_SCALE)
+                return;
+
+            currentScale = nextScale;
+            ApplyScaling();
+        }
+
+        private void ApplyScaling()
+        {
+            foreach (var (pb, original) in imageList)
+            {
+                int newWidth = (int)(original.Width * currentScale);
+                int newHeight = (int)(original.Height * currentScale);
+
+                pb.Image?.Dispose(); // 이전 이미지 제거
+                pb.Image = ResizeImageHighQuality(original, new Size(newWidth, newHeight));
+                pb.Size = pb.Image.Size;
+                
+
+            }
+
+            // 탭 스크롤 갱신
+            TabPage currentTab = tabControl1.SelectedTab;
+            if (currentTab != null)
+            {
+                int maxRight = 0, maxBottom = 0;
+                foreach (Control ctrl in currentTab.Controls)
+                {
+                    maxRight = Math.Max(maxRight, ctrl.Right);
+                    maxBottom = Math.Max(maxBottom, ctrl.Bottom);
+                }
+
+                currentTab.AutoScroll = true;
+                currentTab.AutoScrollMinSize = new Size(maxRight + 50, maxBottom + 50);
+            }
         }
     }
 }
