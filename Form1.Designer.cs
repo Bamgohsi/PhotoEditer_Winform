@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             groupBox1 = new GroupBox();
             button10 = new Button();
             button9 = new Button();
@@ -49,9 +50,13 @@
             toolStripp_Save = new ToolStripMenuItem();
             toolStripMenuItem3 = new ToolStripMenuItem();
             groupBox2 = new GroupBox();
+            lblHeight = new Label();
+            lblWidth = new Label();
             btn_Save = new Button();
             btn_NewFile = new Button();
             btn_Open = new Button();
+            btnRotateRight = new Button();
+            btnRotateLeft = new Button();
             groupBox1.SuspendLayout();
             tabPage2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
@@ -237,6 +242,10 @@
             // 
             // groupBox2
             // 
+            groupBox2.Controls.Add(btnRotateLeft);
+            groupBox2.Controls.Add(btnRotateRight);
+            groupBox2.Controls.Add(lblHeight);
+            groupBox2.Controls.Add(lblWidth);
             groupBox2.Controls.Add(btn_Save);
             groupBox2.Controls.Add(btn_NewFile);
             groupBox2.Controls.Add(btn_Open);
@@ -245,6 +254,26 @@
             groupBox2.Size = new Size(776, 41);
             groupBox2.TabIndex = 3;
             groupBox2.TabStop = false;
+            // 
+            // lblHeight
+            // 
+            lblHeight.AutoSize = true;
+            lblHeight.Font = new Font("맑은 고딕", 9F, FontStyle.Bold, GraphicsUnit.Point);
+            lblHeight.Location = new Point(425, 16);
+            lblHeight.Name = "lblHeight";
+            lblHeight.Size = new Size(46, 15);
+            lblHeight.TabIndex = 1;
+            lblHeight.Text = "Height";
+            // 
+            // lblWidth
+            // 
+            lblWidth.AutoSize = true;
+            lblWidth.Font = new Font("맑은 고딕", 9F, FontStyle.Bold, GraphicsUnit.Point);
+            lblWidth.Location = new Point(319, 16);
+            lblWidth.Name = "lblWidth";
+            lblWidth.Size = new Size(42, 15);
+            lblWidth.TabIndex = 1;
+            lblWidth.Text = "Width";
             // 
             // btn_Save
             // 
@@ -276,6 +305,26 @@
             btn_Open.UseVisualStyleBackColor = true;
             btn_Open.Click += btn_Open_Click;
             // 
+            // btnRotateRight
+            // 
+            btnRotateRight.BackgroundImage = (Image)resources.GetObject("btnRotateRight.BackgroundImage");
+            btnRotateRight.BackgroundImageLayout = ImageLayout.Stretch;
+            btnRotateRight.Location = new Point(542, 9);
+            btnRotateRight.Name = "btnRotateRight";
+            btnRotateRight.Size = new Size(56, 29);
+            btnRotateRight.TabIndex = 2;
+            btnRotateRight.UseVisualStyleBackColor = true;
+            // 
+            // btnRotateLeft
+            // 
+            btnRotateLeft.BackgroundImage = (Image)resources.GetObject("btnRotateLeft.BackgroundImage");
+            btnRotateLeft.BackgroundImageLayout = ImageLayout.Stretch;
+            btnRotateLeft.Location = new Point(604, 9);
+            btnRotateLeft.Name = "btnRotateLeft";
+            btnRotateLeft.Size = new Size(56, 29);
+            btnRotateLeft.TabIndex = 2;
+            btnRotateLeft.UseVisualStyleBackColor = true;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -297,8 +346,11 @@
             menuStrip1.ResumeLayout(false);
             menuStrip1.PerformLayout();
             groupBox2.ResumeLayout(false);
+            groupBox2.PerformLayout();
             ResumeLayout(false);
             PerformLayout();
+
+
         }
 
         #endregion
@@ -329,5 +381,9 @@
         private Button btn_Save;
         private Button btn_NewFile;
         private PictureBox pictureBox1;
+        private Label lblHeight;
+        private Label lblWidth;
+        private Button btnRotateLeft;
+        private Button btnRotateRight;
     }
 }

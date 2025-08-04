@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using System.Xml.Linq;
 using static System.Net.WebRequestMethods;
+using Microsoft.VisualBasic;
 
 namespace photo
 {
@@ -27,31 +28,112 @@ namespace photo
         private bool isResizing = false;
         private Point resizeStartPoint; // 리사이즈 시작 좌표(이진희)
         private Rectangle originalBounds; // 리사이즈 시작시 PictureBox 원래 위치/크기(이진희)
-                                          // 기존 멤버 변수 아래쯤
-        private Point resizeStartScreenPoint;  // ★추가: 리사이즈 시작 시점의 스크린 좌표
+        private double imageAspectRatio;  // 리사이즈 시작 시점의 스크린좌표(이진희)
+        private Point resizeStartScreenPoint;  //리사이즈 시작 시점의 스크린 좌표(이진희)
 
 
         public Form1()
         {
+            this.KeyPreview = true;
             InitializeComponent();
 
+            lblWidth.Click += LblWidth_Click;
+            lblHeight.Click += LblHeight_Click;
 
 
             // pictureBox1에 커스텀 그리기(Paint) 이벤트 연결
             pictureBox1.Paint += pictureBox1_Paint;
 
-
+            
             // PictureBox 드래그 처리 이벤트 연결(이진희)
             pictureBox1.MouseDown += pictureBox1_MouseDown;
             pictureBox1.MouseMove += pictureBox1_MouseMove;
             pictureBox1.MouseUp += pictureBox1_MouseUp;
 
+            btnRotateRight.Click += BtnRotateRight_Click;
+            btnRotateLeft.Click += BtnRotateLeft_Click;
             // 폼(및 지식컨트롤) 클릭 시 테두리 해제 이벤트 연결(이진희)
             this.MouseDown += Form1_MouseDown;
 
             // 재귀적으로 모든 지식 컨트롤에도 연결합니둥(이진희)
             HookMouseDown(this);
         }
+
+        // ▶ 오른쪽으로 90° 회전(이진희)
+        private void BtnRotateRight_Click(object sender, EventArgs e)
+        {
+            if (pictureBox1.Image != null)
+            {
+                pictureBox1.Image.RotateFlip(RotateFlipType.Rotate90FlipNone);
+
+                int oldW = pictureBox1.Width;
+                int oldH = pictureBox1.Height;
+                pictureBox1.SuspendLayout();
+                pictureBox1.Width = oldH;
+                pictureBox1.Height = oldW;
+                pictureBox1.ResumeLayout();
+
+                // 3) 라벨에도 갱신된 크기를 표시
+                lblWidth.Text = $"Width: {pictureBox1.Width}";
+                lblHeight.Text = $"Height: {pictureBox1.Height}";
+
+                pictureBox1.Refresh();
+            }
+        }
+
+        // ▶ 왼쪽으로 90° 회전(이진희)
+        private void BtnRotateLeft_Click(object sender, EventArgs e)
+        {
+            if (pictureBox1.Image != null)
+            {
+                // Rotate270FlipNone == 90° 반시계
+                pictureBox1.Image.RotateFlip(RotateFlipType.Rotate270FlipNone);
+                int oldW = pictureBox1.Width;
+                int oldH = pictureBox1.Height;
+                pictureBox1.SuspendLayout();
+                pictureBox1.Width = oldH;
+                pictureBox1.Height = oldW;
+                pictureBox1.ResumeLayout();
+
+                // 3) 라벨 갱신
+                lblWidth.Text = $"Width: {pictureBox1.Width}";
+                lblHeight.Text = $"Height: {pictureBox1.Height}";
+                pictureBox1.Refresh();
+            }
+        }
+
+
+
+        // ★추가: lblWidth 클릭 → 너비 입력
+        private void LblWidth_Click(object sender, EventArgs e)
+        {
+            string input = Interaction.InputBox(
+                "새 너비를 입력하세요:",
+                "너비 변경",
+                pictureBox1.Width.ToString()
+            );
+            if (int.TryParse(input, out int newW) && newW >= 20)
+            {
+                pictureBox1.Width = newW;
+                lblWidth.Text = $"Width: {pictureBox1.Width}";
+            }
+        }
+
+        // ★추가: lblHeight 클릭 → 높이 입력
+        private void LblHeight_Click(object sender, EventArgs e)
+        {
+            string input = Interaction.InputBox(
+                "새 높이를 입력하세요:",
+                "높이 변경",
+                pictureBox1.Height.ToString()
+            );
+            if (int.TryParse(input, out int newH) && newH >= 20)
+            {
+                pictureBox1.Height = newH;
+                lblHeight.Text = $"Height: {pictureBox1.Height}";
+            }
+        }
+
 
 
         //재귀적으로 parent와 그 자식 컨트롤들에 Form1_MouseDown 훅을 겁니둥.(이진희)
@@ -106,7 +188,7 @@ namespace photo
 
                     // 이미지 크기에 맞게 PictureBox 크기 조절
                     //사진이 크게불러와져서 size를 AutoSize에서 Zoom으로 변경 추후에 필요시 다시 변경(이진희)
-                    pictureBox1.SizeMode = PictureBoxSizeMode.Zoom;
+                    pictureBox1.SizeMode = PictureBoxSizeMode.StretchImage;
                     // pictureBox1.Size = img.Size;
 
 
@@ -148,6 +230,9 @@ namespace photo
                 pictureBox1.Invalidate();
             }
         }
+        // ──────────────────────────────────────────────────────────────────────────────
+        // 1) pictureBox1_MouseDown: 모서리 vs 사이드 판별 → resizeDir 설정
+        // ──────────────────────────────────────────────────────────────────────────────
         private void pictureBox1_MouseDown(object sender, MouseEventArgs e)
         {
             if (pictureBox1.Image != null && e.Button == MouseButtons.Left)
@@ -158,30 +243,44 @@ namespace photo
                 bool atLeft = e.X <= edge;
                 bool atRight = e.X >= pictureBox1.Width - edge;
 
-                // 1) 리사이즈 방향 판별
-                if (atTop && atLeft) resizeDir = ResizeDirection.TopLeft;
-                else if (atTop && atRight) resizeDir = ResizeDirection.TopRight;
-                else if (atBottom && atLeft) resizeDir = ResizeDirection.BottomLeft;
-                else if (atBottom && atRight) resizeDir = ResizeDirection.BottomRight;
-                else if (atTop) resizeDir = ResizeDirection.Top;
-                else if (atBottom) resizeDir = ResizeDirection.Bottom;
-                else if (atLeft) resizeDir = ResizeDirection.Left;
-                else if (atRight) resizeDir = ResizeDirection.Right;
-                else resizeDir = ResizeDirection.None;
+                // ▶ 모서리 먼저 판별
+                if (atLeft && atTop)
+                    resizeDir = ResizeDirection.TopLeft;
+                else if (atRight && atTop)
+                    resizeDir = ResizeDirection.TopRight;
+                else if (atLeft && atBottom)
+                    resizeDir = ResizeDirection.BottomLeft;
+                else if (atRight && atBottom)
+                    resizeDir = ResizeDirection.BottomRight;
+
+                // ▶ 사이드 판별 (모서리가 아니면)
+                else if (atLeft)
+                    resizeDir = ResizeDirection.Left;    // X축만
+                else if (atRight)
+                    resizeDir = ResizeDirection.Right;   // X축만
+                else if (atTop)
+                    resizeDir = ResizeDirection.Top;     // Y축만
+                else if (atBottom)
+                    resizeDir = ResizeDirection.Bottom;  // Y축만
+
+                else
+                    resizeDir = ResizeDirection.None;
+
+                // ★디버깅: 창 제목에 방향 찍어보기
+                this.Text = $"Dir: {resizeDir}";
 
                 if (resizeDir != ResizeDirection.None)
                 {
-                    // 2) 리사이즈 시작
                     isResizing = true;
-                    // 클라이언트+스크린 기준(이진희)
                     resizeStartScreenPoint = Control.MousePosition;
-                    // 시작 크기 , 위치저장(이진희)
                     originalBounds = pictureBox1.Bounds;
-                
-                    return;
+                    
+                    // 드래그시작 시점의 원본이미지 비율 계산(이진희)
+                     imageAspectRatio = (double)pictureBox1.Image.Width / pictureBox1.Image.Height;
+                    return;  // 리사이즈 모드 진입
                 }
 
-                // 기존 이동(드래그) 로직
+                // ▼ 여긴 드래그(이동) 모드
                 isDragging = true;
                 clickOffset = e.Location;
                 showSelectionBorder = true;
@@ -190,47 +289,35 @@ namespace photo
             }
         }
 
+
+        // ──────────────────────────────────────────────────────────────────────────────
+        // 2) pictureBox1_MouseMove: resizeDir에 따라 축별/모서리 리사이즈 수행
+        // ──────────────────────────────────────────────────────────────────────────────
         private void pictureBox1_MouseMove(object sender, MouseEventArgs e)
         {
-            // ★1) 리사이즈 중이면 스크린 좌표 차이로 계산
             if (isResizing)
             {
-                //스크린 좌표 수정(이진희)
-                Point curScreen = Control.MousePosition;
-                int dx = curScreen.X - resizeStartScreenPoint.X;
-                int dy = curScreen.Y - resizeStartScreenPoint.Y;
+                Point cur = Control.MousePosition;
+                int dx = cur.X - resizeStartScreenPoint.X;
+                int dy = cur.Y - resizeStartScreenPoint.Y;
 
-                // 기존 originalBounds 기반으로 newBounds 계산 코드수정(이진희)
                 Rectangle nb = originalBounds;
                 switch (resizeDir)
                 {
-                    case ResizeDirection.Left:
-                        nb.X += dx;
-                        nb.Width = originalBounds.Width - dx;
-                        break;
-                    case ResizeDirection.Right:
-                        nb.Width = originalBounds.Width + dx;
-                        break;
-                    case ResizeDirection.Top:
-                        nb.Y += dy;
-                        nb.Height = originalBounds.Height - dy;
-                        break;
-                    case ResizeDirection.Bottom:
-                        nb.Height = originalBounds.Height + dy;
-                        break;
+                    // ▶ 모서리: X·Y 둘 다
                     case ResizeDirection.TopLeft:
-                        nb.X += dx;
+                        nb.X = originalBounds.X + dx;
                         nb.Width = originalBounds.Width - dx;
-                        nb.Y += dy;
+                        nb.Y = originalBounds.Y + dy;
                         nb.Height = originalBounds.Height - dy;
                         break;
                     case ResizeDirection.TopRight:
                         nb.Width = originalBounds.Width + dx;
-                        nb.Y += dy;
+                        nb.Y = originalBounds.Y + dy;
                         nb.Height = originalBounds.Height - dy;
                         break;
                     case ResizeDirection.BottomLeft:
-                        nb.X += dx;
+                        nb.X = originalBounds.X + dx;
                         nb.Width = originalBounds.Width - dx;
                         nb.Height = originalBounds.Height + dy;
                         break;
@@ -238,21 +325,50 @@ namespace photo
                         nb.Width = originalBounds.Width + dx;
                         nb.Height = originalBounds.Height + dy;
                         break;
+
+                    // ▶ 사이드 가로: X만
+                    case ResizeDirection.Left:
+                        nb.X = originalBounds.X + dx;
+                        nb.Width = originalBounds.Width - dx;
+                        // 수정: 세로고정-> 가로만 리사이즈함 (이진희)
+                        nb.Height = originalBounds.Height;
+                        break;
+                
+                    case ResizeDirection.Right:
+                        nb.Width = originalBounds.Width + dx;
+                        // 세로고정 -> 가로만 리사이즈함(이진희)
+                        nb.Height = originalBounds.Height;
+                        break;
+
+                    // ▶ 사이드 세로: Y만
+                  
+                    case ResizeDirection.Top:
+                        nb.Y = originalBounds.Y + dy;
+                        nb.Height = originalBounds.Height - dy;
+                        // 가로고정-> 세로만 리사이즈(이진희)
+                        nb.Width = originalBounds.Width;
+                        break;
+
+                    case ResizeDirection.Bottom:
+                        nb.Height = originalBounds.Height + dy;
+                        // 가로고정 -> 세로만 리사이즈(이진희)
+                        nb.Width = originalBounds.Width;
+                        break;
                 }
 
                 // 최소 크기 제한
                 if (nb.Width < 20) nb.Width = 20;
                 if (nb.Height < 20) nb.Height = 20;
 
-                //flicker 방지용 Layout suspend/resume (이진희)
                 pictureBox1.SuspendLayout();
                 pictureBox1.Bounds = nb;
                 pictureBox1.ResumeLayout();
-
+                lblWidth.Text = $"Width: {pictureBox1.Width}";
+                lblHeight.Text = $"Height: {pictureBox1.Height}";
                 return;
             }
 
-            // 2) 리사이즈가 아니고 드래그도 아닐 때 → 커서 모양 변경
+            // 리사이즈 모드가 아닐 땐 커서 모양 변경/드래그 유지
             const int edge = 5;
             bool atTop = e.Y <= edge;
             bool atBottom = e.Y >= pictureBox1.Height - edge;
@@ -261,30 +377,23 @@ namespace photo
 
             if (!isDragging)
             {
-                if (atTop && atLeft)
-                    pictureBox1.Cursor = Cursors.SizeNWSE;
-                else if (atTop && atRight)
-                    pictureBox1.Cursor = Cursors.SizeNESW;
-                else if (atBottom && atLeft)
-                    pictureBox1.Cursor = Cursors.SizeNESW;
-                else if (atBottom && atRight)
-                    pictureBox1.Cursor = Cursors.SizeNWSE;
-                else if (atTop || atBottom)
-                    pictureBox1.Cursor = Cursors.SizeNS;
-                else if (atLeft || atRight)
-                    pictureBox1.Cursor = Cursors.SizeWE;
-                else
-                    pictureBox1.Cursor = Cursors.Default;
+                if (atTop && atLeft) pictureBox1.Cursor = Cursors.SizeNWSE;
+                else if (atTop && atRight) pictureBox1.Cursor = Cursors.SizeNESW;
+                else if (atBottom && atLeft) pictureBox1.Cursor = Cursors.SizeNESW;
+                else if (atBottom && atRight) pictureBox1.Cursor = Cursors.SizeNWSE;
+                else if (atTop || atBottom) pictureBox1.Cursor = Cursors.SizeNS;
+                else if (atLeft || atRight) pictureBox1.Cursor = Cursors.SizeWE;
+                else pictureBox1.Cursor = Cursors.Default;
             }
-            // 3) 드래그 중이면 이동
             else
             {
+                // 이동(드래그)
                 Point current = Control.MousePosition;
-                int dx = current.X - lastMousePosition.X;
-                int dy = current.Y - lastMousePosition.Y;
+                int dx2 = current.X - lastMousePosition.X;
+                int dy2 = current.Y - lastMousePosition.Y;
                 pictureBox1.Location = new Point(
-                    pictureBox1.Location.X + dx,
-                    pictureBox1.Location.Y + dy
+                    pictureBox1.Location.X + dx2,
+                    pictureBox1.Location.Y + dy2
                 );
                 lastMousePosition = current;
             }
@@ -321,6 +430,9 @@ namespace photo
 
         // pictureBox1이 다시 그려질 때 호출됨
         // 선택 테두리를 그림
+
+
+
         private void pictureBox1_Paint(object sender, PaintEventArgs e)
         {
             if (showSelectionBorder)
