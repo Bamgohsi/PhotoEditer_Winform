@@ -37,15 +37,12 @@
             toolStrip_Open = new ToolStripMenuItem();
             toolStripp_Save = new ToolStripMenuItem();
             toolStripMenuItem3 = new ToolStripMenuItem();
-            groupBox2 = new GroupBox();
-            btn_Save = new Button();
-            btn_NewFile = new Button();
-            btn_Open = new Button();
+            toolStripMenuItem1 = new ToolStripMenuItem();
+            toolStripMenuItem2 = new ToolStripMenuItem();
             tabPage2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             tabControl1.SuspendLayout();
             menuStrip1.SuspendLayout();
-            groupBox2.SuspendLayout();
             SuspendLayout();
             // 
             // tabPage2
@@ -98,8 +95,8 @@
             // 
             toolStrip_File.DropDownItems.AddRange(new ToolStripItem[] { toolStrip_NewFile, toolStrip_Open, toolStripp_Save });
             toolStrip_File.Name = "toolStrip_File";
-            toolStrip_File.Size = new Size(43, 20);
-            toolStrip_File.Text = "파일";
+            toolStrip_File.Size = new Size(57, 20);
+            toolStrip_File.Text = "파일(F)";
             // 
             // toolStrip_NewFile
             // 
@@ -124,54 +121,22 @@
             // 
             // toolStripMenuItem3
             // 
+            toolStripMenuItem3.DropDownItems.AddRange(new ToolStripItem[] { toolStripMenuItem1, toolStripMenuItem2 });
             toolStripMenuItem3.Name = "toolStripMenuItem3";
-            toolStripMenuItem3.Size = new Size(127, 20);
-            toolStripMenuItem3.Text = "toolStripMenuItem3";
+            toolStripMenuItem3.Size = new Size(57, 20);
+            toolStripMenuItem3.Text = "편집(E)";
             // 
-            // groupBox2
+            // toolStripMenuItem1
             // 
-            groupBox2.BackColor = Color.Transparent;
-            groupBox2.Controls.Add(btn_Save);
-            groupBox2.Controls.Add(btn_NewFile);
-            groupBox2.Controls.Add(btn_Open);
-            groupBox2.Location = new Point(15, 27);
-            groupBox2.Name = "groupBox2";
-            groupBox2.Size = new Size(1880, 42);
-            groupBox2.TabIndex = 3;
-            groupBox2.TabStop = false;
+            toolStripMenuItem1.Name = "toolStripMenuItem1";
+            toolStripMenuItem1.Size = new Size(182, 22);
+            toolStripMenuItem1.Text = "실행 취소";
             // 
-            // btn_Save
+            // toolStripMenuItem2
             // 
-            btn_Save.FlatStyle = FlatStyle.Flat;
-            btn_Save.Location = new Point(67, 12);
-            btn_Save.Name = "btn_Save";
-            btn_Save.Size = new Size(25, 25);
-            btn_Save.TabIndex = 0;
-            btn_Save.Text = "저";
-            btn_Save.UseVisualStyleBackColor = true;
-            btn_Save.Click += btn_Save_Click;
-            // 
-            // btn_NewFile
-            // 
-            btn_NewFile.FlatStyle = FlatStyle.Flat;
-            btn_NewFile.Location = new Point(7, 12);
-            btn_NewFile.Name = "btn_NewFile";
-            btn_NewFile.Size = new Size(25, 25);
-            btn_NewFile.TabIndex = 0;
-            btn_NewFile.Text = "새";
-            btn_NewFile.UseVisualStyleBackColor = true;
-            //btn_NewFile.Click += btn_NewFile_Click;
-            // 
-            // btn_Open
-            // 
-            btn_Open.FlatStyle = FlatStyle.Flat;
-            btn_Open.Location = new Point(37, 12);
-            btn_Open.Name = "btn_Open";
-            btn_Open.Size = new Size(25, 25);
-            btn_Open.TabIndex = 0;
-            btn_Open.Text = "옾";
-            btn_Open.UseVisualStyleBackColor = true;
-            //btn_Open.Click += btn_Open_Click;
+            toolStripMenuItem2.Name = "toolStripMenuItem2";
+            toolStripMenuItem2.Size = new Size(182, 22);
+            toolStripMenuItem2.Text = "toolStripMenuItem2";
             // 
             // Form1
             // 
@@ -179,20 +144,17 @@
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = SystemColors.Control;
             ClientSize = new Size(1711, 954);
-            Controls.Add(groupBox2);
             Controls.Add(tabControl1);
             Controls.Add(menuStrip1);
             MainMenuStrip = menuStrip1;
             Name = "Form1";
             Text = "Form1";
-            Load += Form1_Load;
             tabPage2.ResumeLayout(false);
             tabPage2.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).EndInit();
             tabControl1.ResumeLayout(false);
             menuStrip1.ResumeLayout(false);
             menuStrip1.PerformLayout();
-            groupBox2.ResumeLayout(false);
             ResumeLayout(false);
             PerformLayout();
         }
@@ -206,12 +168,10 @@
         private ToolStripMenuItem toolStrip_File;
         private ToolStripMenuItem toolStrip_Open;
         private ToolStripMenuItem toolStripp_Save;
-        private GroupBox groupBox2;
-        private Button btn_Open;
         private ToolStripMenuItem toolStrip_NewFile;
-        private Button btn_Save;
-        private Button btn_NewFile;
         private PictureBox pictureBox1;
         private ToolStripMenuItem toolStripMenuItem3;
+        private ToolStripMenuItem toolStripMenuItem1;
+        private ToolStripMenuItem toolStripMenuItem2;
     }
 }

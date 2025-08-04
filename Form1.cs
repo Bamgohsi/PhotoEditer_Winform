@@ -23,6 +23,15 @@ namespace photo
         // 현재 표시된 패널을 추적하는 변수
         private Panel currentVisiblePanel = null;
 
+        // 원본 이미지를 저장할 필드
+        private Image originalImage = null;
+
+        // 모자이크 효과가 적용되었는지 추적하는 변수
+        private bool isMosaicApplied = false;
+
+        //
+
+
 
         public Form1()
         {
@@ -34,16 +43,11 @@ namespace photo
 
             this.WindowState = FormWindowState.Maximized; // 전체화면으로 시작
 
-            this.BackColor = Color.FromArgb(255, 25, 25, 25); // 폼의 배경색을 #191919 (R:25, G:25, B:25)로 설정
+            this.BackColor = Color.FromArgb(255, 45,45,45); // 폼의 배경색을 변경
+            tabControl1.BackColor = Color.Gray;
+            tabPage2.BackColor = Color.LightGray;
 
-            //CreateButtons(); // 버튼 생성 메서드 호출
-
-            // btn_NewFile 버튼 스타일 설정
-            btn_NewFile.BackColor = Color.FromArgb(255, 73, 80, 87); // 버튼 배경색을 #495057으로 설정
-            btn_NewFile.ForeColor = Color.FromArgb(255, 134, 142, 150); // 버튼 폰트 색상을 #868e96로 설정
-            btn_NewFile.FlatStyle = FlatStyle.Flat; // 버튼 스타일을 Flat으로 변경
-            btn_NewFile.FlatAppearance.BorderSize = 1; // 테두리를 보이게 변경
-            btn_NewFile.FlatAppearance.BorderColor = Color.FromArgb(255, 134, 142, 150); // 버튼 테두리 색상을 #868e96로 설정
+            CreateButtons(); // 상단 버튼 생성 메서드 호출
         }
 
         /// 버튼과 패널을 동적으로 생성하고 초기화합니다.
@@ -68,11 +72,11 @@ namespace photo
                 Button btn = new Button();
                 btn.Text = $"{i + 1}"; // 버튼 텍스트를 숫자로 설정
                 btn.Size = new Size(buttonWidth, buttonHeight);
-                btn.BackColor = Color.FromArgb(255, 73, 80, 87); // 버튼 배경색을 #343a40으로 설정
-                btn.ForeColor = Color.FromArgb(255, 134, 142, 150); // 버튼 폰트 색상을 #868e96로 설정
+                btn.BackColor = Color.FromArgb(255, 45,45,45); // 버튼 배경색을 변경
+                btn.ForeColor = Color.FromArgb(255, 108, 117, 125); // 버튼 폰트 색상을 변경
                 btn.FlatStyle = FlatStyle.Flat; // 버튼 스타일을 Flat으로 변경
                 btn.FlatAppearance.BorderSize = 1; // 테두리를 보이게 변경
-                btn.FlatAppearance.BorderColor = Color.FromArgb(255, 134, 142, 150); // 버튼 테두리 색상을 #868e96로 설정
+                btn.FlatAppearance.BorderColor = Color.FromArgb(255, 108, 117, 125); // 버튼 테두리 색상을 #868e96로 설정
 
                 // 버튼 위치 계산 (2열 5행)
                 int col = i % columns;
@@ -99,7 +103,7 @@ namespace photo
                 {
                     Location = panelLocation,
                     Size = panelSize,
-                    BackColor = Color.FromArgb(255, 73, 80, 87), // 패널 배경색을 변경
+                    BackColor = Color.FromArgb(255, 68,68,68), // 패널 배경색을 변경
                     Visible = false
                 };
 
@@ -107,8 +111,8 @@ namespace photo
                 panel.Controls.Add(new Label()
                 {
                     Text = $"편집 속성 {i + 1}",
-                    Location = new Point(10, 10),
-                    ForeColor = Color.White // 라벨 텍스트 색상을 흰색으로 설정
+                    Location = new Point(5, 5),
+                    ForeColor = Color.DarkGray // 라벨 텍스트 색상을 흰색으로 설정
                 });
 
                 // 패널에 Paint 이벤트 핸들러 추가
@@ -127,42 +131,46 @@ namespace photo
             {
                 int index = (int)clickedButton.Tag; // 버튼의 Tag에서 인덱스 가져오기
 
-                // 패널이 없는 버튼은 아무 동작도 하지 않음
-                if (index >= dynamicPanels.Length)
+                // 왼쪽 첫 번째 버튼(인덱스 0)은 모자이크 효과를 토글합니다.
+                if (index == 0)
                 {
-                    return;
-                }
-
-                Panel targetPanel = dynamicPanels[index];
-                Panel previousVisiblePanel = currentVisiblePanel;
-
-                if (currentVisiblePanel == targetPanel)
-                {
-                    // 현재 보이는 패널과 클릭된 패널이 같으면 토글
-                    currentVisiblePanel.Visible = false;
-                    currentVisiblePanel = null;
-                }
-                else
-                {
-                    // 다른 패널이 보이고 있다면 숨기기
+                    this.MosaicButton_Click(sender, e);
+                    // 패널은 열지 않고, 현재 열려있는 패널이 있다면 닫음
                     if (currentVisiblePanel != null)
                     {
                         currentVisiblePanel.Visible = false;
+                        currentVisiblePanel = null;
+                    }
+                }
+                // 나머지 버튼은 기존처럼 편집 패널을 토글
+                else if (index < dynamicPanels.Length)
+                {
+                    Panel targetPanel = dynamicPanels[index];
+                    Panel previousVisiblePanel = currentVisiblePanel;
+
+                    if (currentVisiblePanel == targetPanel)
+                    {
+                        currentVisiblePanel.Visible = false;
+                        currentVisiblePanel = null;
+                    }
+                    else
+                    {
+                        if (currentVisiblePanel != null)
+                        {
+                            currentVisiblePanel.Visible = false;
+                        }
+                        targetPanel.Visible = true;
+                        currentVisiblePanel = targetPanel;
                     }
 
-                    // 클릭된 버튼에 해당하는 패널만 보이게 하기
-                    targetPanel.Visible = true;
-                    currentVisiblePanel = targetPanel;
-                }
-
-                // 이전 패널과 새 패널의 Paint 이벤트를 강제로 호출하여 테두리를 갱신
-                if (previousVisiblePanel != null)
-                {
-                    previousVisiblePanel.Invalidate();
-                }
-                if (currentVisiblePanel != null)
-                {
-                    currentVisiblePanel.Invalidate();
+                    if (previousVisiblePanel != null)
+                    {
+                        previousVisiblePanel.Invalidate();
+                    }
+                    if (currentVisiblePanel != null)
+                    {
+                        currentVisiblePanel.Invalidate();
+                    }
                 }
             }
         }
@@ -177,7 +185,7 @@ namespace photo
             // 현재 보이는 패널인 경우에만 테두리 그리기
             if (paintedPanel != null && paintedPanel == currentVisiblePanel)
             {
-                // 테두리 색상을 검은색으로 변경
+                // 테두리 색상을 회색으로 변경
                 using (Pen pen = new Pen(Color.Gray, 1))
                 {
                     pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Solid;
@@ -188,36 +196,189 @@ namespace photo
             }
         }
 
-        //// [새로 만들기] 버튼 클릭 시 실행
-        //private void btn_NewFile_Click(object sender, EventArgs e)
-        //{
-        //    pictureBox1.Image = null;
-        //}
+        /// 버튼 클릭 시 실행되는 모자이크 이벤트 핸들러입니다.
+        private void MosaicButton_Click(object sender, EventArgs e)
+        {
+            if (pictureBox1.Image == null)
+            {
+                MessageBox.Show("먼저 이미지를 불러와주세요.");
+                return;
+            }
 
-        //// [열기] 버튼 클릭 시 실행
-        //private void btn_Open_Click(object sender, EventArgs e)
-        //{
-        //    OpenFileDialog openFileDialog = new OpenFileDialog();
-        //    openFileDialog.Title = "이미지 열기";
-        //    openFileDialog.Filter = "이미지 파일|*.jpg;*.jpeg;*.png;*.bmp;*.gif";
+            // 모자이크 효과가 적용된 상태라면 원본 이미지로 되돌립니다.
+            if (isMosaicApplied)
+            {
+                // 원본 이미지를 PictureBox에 할당
+                pictureBox1.Image = new Bitmap(originalImage);
+                pictureBox1.Size = originalImage.Size;
+                isMosaicApplied = false;
+            }
+            // 모자이크 효과가 적용되지 않은 상태라면 효과를 적용합니다.
+            else
+            {
+                // 모자이크 크기
+                int mosaicSize = 10;
 
-        //    if (openFileDialog.ShowDialog() == DialogResult.OK)
-        //    {
-        //        try
-        //        {
-        //            pictureBox1.Image?.Dispose();
-        //            Image img = Image.FromFile(openFileDialog.FileName);
-        //            pictureBox1.Image = img;
-        //            pictureBox1.SizeMode = PictureBoxSizeMode.AutoSize;
-        //            pictureBox1.Size = img.Size;
-        //            pictureBox1.Location = new Point(10, 10);
-        //        }
-        //        catch (Exception ex)
-        //        {
-        //            MessageBox.Show("이미지를 불러오는 중 오류 발생: " + ex.Message);
-        //        }
-        //    }
-        //}
+                // 원본 이미지를 기반으로 모자이크 효과를 적용
+                Bitmap originalBitmap = new Bitmap(originalImage);
+                Bitmap mosaicBitmap = new Bitmap(originalBitmap.Width, originalBitmap.Height);
+
+                // 이중 for 루프를 사용하여 모자이크 효과를 적용합니다.
+                for (int y = 0; y < originalBitmap.Height; y += mosaicSize)
+                {
+                    for (int x = 0; x < originalBitmap.Width; x += mosaicSize)
+                    {
+                        // 모자이크 블록의 평균 색상을 계산합니다.
+                        Color averageColor = CalculateAverageColor(originalBitmap, x, y, mosaicSize);
+
+                        // 모자이크 블록에 평균 색상을 채웁니다.
+                        FillMosaicBlock(mosaicBitmap, averageColor, x, y, mosaicSize, originalBitmap.Width, originalBitmap.Height);
+                    }
+                }
+
+                // PictureBox에 모자이크가 적용된 이미지를 할당합니다.
+                pictureBox1.Image = mosaicBitmap;
+                isMosaicApplied = true;
+            }
+        }
+
+        /// for 반복문을 사용하여 버튼을 1열로 생성하고 배치하는 메서드입니다.
+        /// 상단 버튼
+        private void CreateButtons()
+        {
+            // 버튼 생성에 필요한 변수들
+            int buttonWidth = 30;  // 버튼 너비를 25로 변경
+            int buttonHeight = 30; // 버튼 높이를 25로 변경
+            int spacing = 10;
+            int startX = 15;   // 시작 X 위치를 15로 변경
+            int startY = 32; // 시작 Y 위치를 32로 변경
+            int buttonCount = 5; // 생성할 총 버튼 개수
+
+            // 1열로 5개 버튼 배치
+            for (int i = 0; i < buttonCount; i++)
+            {
+                Button btn = new Button();
+
+                // 버튼 스타일 설정
+                btn.BackColor = Color.FromArgb(255, 73, 80, 87);
+                btn.ForeColor = Color.FromArgb(255, 134, 142, 150);
+                btn.FlatStyle = FlatStyle.Flat;
+                btn.FlatAppearance.BorderSize = 1;
+                btn.FlatAppearance.BorderColor = Color.FromArgb(255, 134, 142, 150);
+
+                btn.Text = $"{i + 1}"; // 버튼 텍스트를 숫자로 설정
+                btn.Size = new Size(buttonWidth, buttonHeight);
+
+                // 버튼 위치 계산 (Y는 고정, X는 반복마다 증가)
+                btn.Location = new Point(startX + i * (buttonWidth + spacing), startY);
+
+                // 첫 번째 버튼 (i == 0)에 원본 이미지 복원 이벤트를 연결합니다.
+                if (i == 0)
+                {
+                    btn.Click += FirstButton_Click;
+                }
+                // 두 번째 버튼 (i == 1)에 이미지 열기 이벤트를 연결합니다.
+                else if (i == 1)
+                {
+                    btn.Click += SecondButton_Click;
+                }
+                else
+                {
+                    // 나머지 버튼에는 기존 이벤트를 연결합니다.
+                    btn.Click += Button_Click;
+                }
+
+                // 폼에 버튼 추가
+                this.Controls.Add(btn);
+            }
+        }
+
+        /// 첫 번째 버튼 클릭 시 실행되는 이벤트 핸들러입니다.
+        /// PictureBox의 이미지를 원본으로 되돌립니다.
+        private void FirstButton_Click(object sender, EventArgs e)
+        {
+            if (pictureBox1 != null && originalImage != null)
+            {
+                // 원본 이미지를 PictureBox에 할당
+                pictureBox1.Image = originalImage;
+                pictureBox1.Size = originalImage.Size;
+                isMosaicApplied = false; // 모자이크 효과가 해제되었음을 명시
+                pictureBox1.Invalidate(); // 변경 사항을 즉시 반영
+            }
+        }
+
+        /// 두 번째 버튼 클릭 시 실행되는 이벤트 핸들러입니다.
+        /// OpenFileDialog를 열어 이미지를 불러옵니다.
+        private void SecondButton_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog openFileDialog = new OpenFileDialog();
+            openFileDialog.Title = "이미지 열기";
+            openFileDialog.Filter = "이미지 파일|*.jpg;*.jpeg;*.png;*.bmp;*.gif";
+
+            if (openFileDialog.ShowDialog() == DialogResult.OK)
+            {
+                try
+                {
+                    pictureBox1.Image?.Dispose();
+
+                    // 새 이미지를 불러와 원본 이미지 변수에 저장
+                    Image img = Image.FromFile(openFileDialog.FileName);
+                    originalImage = new Bitmap(img); // 원본 이미지를 복사하여 저장
+
+                    pictureBox1.Image = originalImage;
+                    pictureBox1.SizeMode = PictureBoxSizeMode.AutoSize;
+                    pictureBox1.Size = img.Size;
+                    pictureBox1.Location = new Point(10, 10);
+                    isMosaicApplied = false; // 새 이미지를 불러오면 모자이크 상태 초기화
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("이미지를 불러오는 중 오류 발생: " + ex.Message);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 지정된 영역의 평균 색상을 계산합니다.
+        /// </summary>
+        private Color CalculateAverageColor(Bitmap bitmap, int startX, int startY, int size)
+        {
+            long red = 0, green = 0, blue = 0;
+            int pixelCount = 0;
+
+            for (int y = startY; y < startY + size && y < bitmap.Height; y++)
+            {
+                for (int x = startX; x < startX + size && x < bitmap.Width; x++)
+                {
+                    Color pixelColor = bitmap.GetPixel(x, y);
+                    red += pixelColor.R;
+                    green += pixelColor.G;
+                    blue += pixelColor.B;
+                    pixelCount++;
+                }
+            }
+
+            if (pixelCount > 0)
+            {
+                return Color.FromArgb((int)(red / pixelCount), (int)(green / pixelCount), (int)(blue / pixelCount));
+            }
+
+            return Color.Black;
+        }
+
+        /// <summary>
+        /// 지정된 영역을 단일 색상으로 채웁니다.
+        /// </summary>
+        private void FillMosaicBlock(Bitmap bitmap, Color color, int startX, int startY, int size, int maxWidth, int maxHeight)
+        {
+            for (int y = startY; y < startY + size && y < maxHeight; y++)
+            {
+                for (int x = startX; x < startX + size && x < maxWidth; x++)
+                {
+                    bitmap.SetPixel(x, y, color);
+                }
+            }
+        }
 
         // [저장] 버튼 클릭 시 실행 (추후 구현 예정)
         private void btn_Save_Click(object sender, EventArgs e)
@@ -261,7 +422,6 @@ namespace photo
         private void Form1_Load(object sender, EventArgs e)
         {
             // 초기화 로직
-            this.BackColor = Color.FromArgb(255, 52, 58, 64);
         }
 
         // pictureBox1이 다시 그려질 때 호출됨 (선택 테두리 그림)
