@@ -170,7 +170,6 @@ namespace photo
         {
             // 현재는 비어 있음
         }
-
         // pictureBox1이 다시 그려질 때 호출됨
         // 선택 테두리를 그림
         private void pictureBox1_Paint(object sender, PaintEventArgs e)
