@@ -15,34 +15,170 @@ namespace photo
         // 선택 테두리를 표시할지 여부 (마우스 클릭 시 true)
         private bool showSelectionBorder = false;
 
+        // 동적으로 생성할 버튼과 패널 배열
+        private Button[] dynamicButtons;
+        private Panel[] dynamicPanels;
+
+        // 현재 표시된 패널을 추적하는 변수
+        private Panel currentVisiblePanel = null;
+
+
         public Form1()
         {
             InitializeComponent();
+            InitializeDynamicControls();
 
             // pictureBox1에 커스텀 그리기(Paint) 이벤트 연결
             pictureBox1.Paint += pictureBox1_Paint;
-            Rigth_Panel_GropBox.Visible = false;
-
-            // 버튼들의 Click 이벤트에 동일한 핸들러를 연결
-            button2.Click += button1_Click;
-            button3.Click += button1_Click;
-            button4.Click += button1_Click;
+            this.WindowState = FormWindowState.Maximized; // 전체화면으로 시작
         }
 
-        private void button4_Click(object sender, EventArgs e)
+        /// <summary>
+        /// 버튼과 패널을 동적으로 생성하고 초기화합니다.
+        /// </summary>
+        private void InitializeDynamicControls()
         {
-            // 미사용 버튼 - 추후 기능 연결 가능
+            // 버튼 관련 설정
+            int buttonWidth = 40;
+            int buttonHeight = 40;
+            int spacing = 10;
+            int startX = 15;
+            int startY = 95;
+            int columns = 2; // 2열로 배치
+            int buttonCount = 10; // 총 버튼 개수
+
+            dynamicButtons = new Button[buttonCount];
+
+            // 2열 5행으로 버튼 배치
+            for (int i = 0; i < buttonCount; i++)
+            {
+                Button btn = new Button();
+                btn.Text = $"{i + 1}"; // 버튼 텍스트를 숫자로 설정
+                btn.Size = new Size(buttonWidth, buttonHeight);
+
+                // 버튼 위치 계산 (2열 5행)
+                int col = i % columns;
+                int row = i / columns;
+                btn.Location = new Point(startX + col * (buttonWidth + spacing),
+                                         startY + row * (buttonHeight + spacing));
+
+                btn.Tag = i; // 버튼에 인덱스 저장
+                btn.Click += Button_Click; // 클릭 이벤트 핸들러 연결
+                this.Controls.Add(btn);
+                dynamicButtons[i] = btn;
+            }
+
+            // 패널 관련 설정
+            int panelCount = 10;
+            dynamicPanels = new Panel[panelCount];
+
+            Point panelLocation = new Point(1600, 90);
+            Size panelSize = new Size(300, 900);
+
+            for (int i = 0; i < panelCount; i++)
+            {
+                Panel panel = new Panel()
+                {
+                    Location = panelLocation,
+                    Size = panelSize,
+                    Visible = false
+                };
+
+                // 패널에 라벨 추가
+                panel.Controls.Add(new Label() { Text = $"편집 속성 {i + 1}", Location = new Point(10, 10) });
+
+                // 패널에 Paint 이벤트 핸들러 추가
+                panel.Paint += Panel_Paint;
+
+                this.Controls.Add(panel);
+                dynamicPanels[i] = panel; // 생성한 패널을 배열에 저장
+            }
+
+            // 첫 번째 패널을 초기 상태에서 보이게 설정하고, 테두리를 그리기 위해 Invalidate 호출
+            if (dynamicPanels.Length > 0)
+            {
+                currentVisiblePanel = dynamicPanels[0];
+                currentVisiblePanel.Visible = true;
+                currentVisiblePanel.Invalidate();
+            }
+        }
+
+        // 모든 동적 버튼의 클릭 이벤트를 처리하는 단일 핸들러
+        private void Button_Click(object sender, EventArgs e)
+        {
+            Button clickedButton = sender as Button;
+            if (clickedButton != null)
+            {
+                int index = (int)clickedButton.Tag; // 버튼의 Tag에서 인덱스 가져오기
+
+                // 패널이 없는 버튼은 아무 동작도 하지 않음
+                if (index >= dynamicPanels.Length)
+                {
+                    return;
+                }
+
+                Panel targetPanel = dynamicPanels[index];
+                Panel previousVisiblePanel = currentVisiblePanel;
+
+                if (currentVisiblePanel == targetPanel)
+                {
+                    // 현재 보이는 패널과 클릭된 패널이 같으면 토글
+                    currentVisiblePanel.Visible = false;
+                    currentVisiblePanel = null;
+                }
+                else
+                {
+                    // 다른 패널이 보이고 있다면 숨기기
+                    if (currentVisiblePanel != null)
+                    {
+                        currentVisiblePanel.Visible = false;
+                    }
+
+                    // 클릭된 버튼에 해당하는 패널만 보이게 하기
+                    targetPanel.Visible = true;
+                    currentVisiblePanel = targetPanel;
+                }
+
+                // 이전 패널과 새 패널의 Paint 이벤트를 강제로 호출하여 테두리를 갱신
+                if (previousVisiblePanel != null)
+                {
+                    previousVisiblePanel.Invalidate();
+                }
+                if (currentVisiblePanel != null)
+                {
+                    currentVisiblePanel.Invalidate();
+                }
+            }
+        }
+
+        /// <summary>
+        /// 패널의 Paint 이벤트 핸들러: 활성화된 패널에 테두리를 그립니다.
+        /// </summary>
+        private void Panel_Paint(object sender, PaintEventArgs e)
+        {
+            Panel paintedPanel = sender as Panel;
+
+            // 현재 보이는 패널인 경우에만 테두리 그리기
+            if (paintedPanel != null && paintedPanel == currentVisiblePanel)
+            {
+                // 테두리 색상을 검은색으로 변경
+                using (Pen pen = new Pen(Color.Black, 1))
+                {
+                    pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Solid;
+                    // 패널 경계에 테두리 그리기
+                    Rectangle rect = new Rectangle(0, 0, paintedPanel.Width - 1, paintedPanel.Height - 1);
+                    e.Graphics.DrawRectangle(pen, rect);
+                }
+            }
         }
 
         // [새로 만들기] 버튼 클릭 시 실행
-        // pictureBox의 이미지 초기화
         private void btn_NewFile_Click(object sender, EventArgs e)
         {
             pictureBox1.Image = null;
         }
 
         // [열기] 버튼 클릭 시 실행
-        // 이미지 파일을 선택하고 pictureBox에 로드
         private void btn_Open_Click(object sender, EventArgs e)
         {
             OpenFileDialog openFileDialog = new OpenFileDialog();
@@ -53,18 +189,11 @@ namespace photo
             {
                 try
                 {
-                    // 기존 이미지가 있을 경우 메모리 해제
                     pictureBox1.Image?.Dispose();
-
-                    // 새로운 이미지 로드
                     Image img = Image.FromFile(openFileDialog.FileName);
                     pictureBox1.Image = img;
-
-                    // 이미지 크기에 맞게 PictureBox 크기 조절
                     pictureBox1.SizeMode = PictureBoxSizeMode.AutoSize;
                     pictureBox1.Size = img.Size;
-
-                    // pictureBox 위치 설정 (좌측 상단 여백)
                     pictureBox1.Location = new Point(10, 10);
                 }
                 catch (Exception ex)
@@ -81,87 +210,54 @@ namespace photo
         }
 
         // 마우스 버튼을 누를 때 호출됨
-        // 드래그 시작 처리 및 선택 테두리 표시
         private void pictureBox1_MouseDown(object sender, MouseEventArgs e)
         {
             if (pictureBox1.Image != null && e.Button == MouseButtons.Left)
             {
-                isDragging = true;          // 드래그 시작
-                clickOffset = e.Location;   // 마우스 클릭 좌표 저장
-                showSelectionBorder = true; // 테두리 표시 ON
-                pictureBox1.Invalidate();   // 다시 그리기 요청 (Paint 호출)
+                isDragging = true;
+                clickOffset = e.Location;
+                showSelectionBorder = true;
+                pictureBox1.Invalidate();
             }
         }
 
-        // 마우스를 이동할 때 호출됨 (드래그 중일 때만)
+        // 마우스를 이동할 때 호출됨
         private void pictureBox1_MouseMove(object sender, MouseEventArgs e)
         {
             if (isDragging)
             {
-                // 기존 위치에서 마우스 이동만큼 offset 적용
                 Point newLocation = pictureBox1.Location;
                 newLocation.X += e.X - clickOffset.X;
                 newLocation.Y += e.Y - clickOffset.Y;
-
-                // PictureBox 위치 갱신
                 pictureBox1.Location = newLocation;
             }
         }
 
         // 마우스 버튼을 놓을 때 호출됨
-        // 드래그 종료 및 선택 테두리 해제
         private void pictureBox1_MouseUp(object sender, MouseEventArgs e)
         {
             isDragging = false;
-
-            // 선택 해제하고 싶을 경우 주석 해제
-            showSelectionBorder = false;
-
-            // 다시 그리기 요청 (Paint 호출)
+            // showSelectionBorder = false; // 선택 해제하고 싶을 경우 주석 해제
             pictureBox1.Invalidate();
         }
 
         // 폼 로드 시 실행 (필요 시 초기화 처리 가능)
         private void Form1_Load(object sender, EventArgs e)
         {
-            // 현재는 비어 있음
-
-            this.WindowState = FormWindowState.Maximized; // 전체화면 시작
-            //groupBox3.Visible = !groupBox1.Visible;
+            // 초기화 로직
         }
 
-        // pictureBox1이 다시 그려질 때 호출됨
-        // 선택 테두리를 그림
+        // pictureBox1이 다시 그려질 때 호출됨 (선택 테두리 그림)
         private void pictureBox1_Paint(object sender, PaintEventArgs e)
         {
             if (showSelectionBorder)
             {
                 using (Pen pen = new Pen(Color.DeepSkyBlue, 2))
                 {
-                    // 실선으로 테두리 그리기 (점선은 DashStyle.Dot 등 사용 가능)
                     pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Solid;
-
-                    // 그림 테두리 사각형 정의 (이미지 전체)
                     Rectangle rect = new Rectangle(0, 0, pictureBox1.Width - 1, pictureBox1.Height - 1);
-
-                    // 테두리 그리기
                     e.Graphics.DrawRectangle(pen, rect);
                 }
-            }
-        }
-
-        // 버튼을 눌렀을 때 그룹박스를 띄웠다 숨겼다 하는 기능
-        private void button1_Click(object sender, EventArgs e)
-        {
-            if (Rigth_Panel_GropBox.Visible == false)
-            {
-                // 그룹박스가 숨겨져 있다면, 보이게 합니다.
-                Rigth_Panel_GropBox.Visible = true;
-            }
-            else
-            {
-                // 그룹박스가 보인다면, 숨깁니다.
-                Rigth_Panel_GropBox.Visible = false;
             }
         }
     }

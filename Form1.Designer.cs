@@ -28,17 +28,6 @@
         /// </summary>
         private void InitializeComponent()
         {
-            groupBox1 = new GroupBox();
-            button10 = new Button();
-            button9 = new Button();
-            button8 = new Button();
-            button7 = new Button();
-            button6 = new Button();
-            button5 = new Button();
-            button4 = new Button();
-            button3 = new Button();
-            button2 = new Button();
-            button1 = new Button();
             tabPage2 = new TabPage();
             tableLayoutPanel1 = new TableLayoutPanel();
             pictureBox1 = new PictureBox();
@@ -53,117 +42,12 @@
             btn_Save = new Button();
             btn_NewFile = new Button();
             btn_Open = new Button();
-            Rigth_Panel_GropBox = new GroupBox();
-            groupBox1.SuspendLayout();
             tabPage2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             tabControl1.SuspendLayout();
             menuStrip1.SuspendLayout();
             groupBox2.SuspendLayout();
             SuspendLayout();
-            // 
-            // groupBox1
-            // 
-            groupBox1.Controls.Add(button10);
-            groupBox1.Controls.Add(button9);
-            groupBox1.Controls.Add(button8);
-            groupBox1.Controls.Add(button7);
-            groupBox1.Controls.Add(button6);
-            groupBox1.Controls.Add(button5);
-            groupBox1.Controls.Add(button4);
-            groupBox1.Controls.Add(button3);
-            groupBox1.Controls.Add(button2);
-            groupBox1.Controls.Add(button1);
-            groupBox1.Location = new Point(12, 65);
-            groupBox1.Name = "groupBox1";
-            groupBox1.Size = new Size(106, 856);
-            groupBox1.TabIndex = 0;
-            groupBox1.TabStop = false;
-            // 
-            // button10
-            // 
-            button10.Location = new Point(54, 186);
-            button10.Name = "button10";
-            button10.Size = new Size(42, 35);
-            button10.TabIndex = 0;
-            button10.UseVisualStyleBackColor = true;
-            button10.Click += button4_Click;
-            // 
-            // button9
-            // 
-            button9.Location = new Point(6, 186);
-            button9.Name = "button9";
-            button9.Size = new Size(42, 35);
-            button9.TabIndex = 0;
-            button9.UseVisualStyleBackColor = true;
-            // 
-            // button8
-            // 
-            button8.Location = new Point(54, 145);
-            button8.Name = "button8";
-            button8.Size = new Size(42, 35);
-            button8.TabIndex = 0;
-            button8.UseVisualStyleBackColor = true;
-            button8.Click += button4_Click;
-            // 
-            // button7
-            // 
-            button7.Location = new Point(6, 145);
-            button7.Name = "button7";
-            button7.Size = new Size(42, 35);
-            button7.TabIndex = 0;
-            button7.UseVisualStyleBackColor = true;
-            // 
-            // button6
-            // 
-            button6.Location = new Point(54, 104);
-            button6.Name = "button6";
-            button6.Size = new Size(42, 35);
-            button6.TabIndex = 0;
-            button6.UseVisualStyleBackColor = true;
-            button6.Click += button4_Click;
-            // 
-            // button5
-            // 
-            button5.Location = new Point(6, 104);
-            button5.Name = "button5";
-            button5.Size = new Size(42, 35);
-            button5.TabIndex = 0;
-            button5.UseVisualStyleBackColor = true;
-            // 
-            // button4
-            // 
-            button4.Location = new Point(54, 63);
-            button4.Name = "button4";
-            button4.Size = new Size(42, 35);
-            button4.TabIndex = 0;
-            button4.UseVisualStyleBackColor = true;
-            button4.Click += button4_Click;
-            // 
-            // button3
-            // 
-            button3.Location = new Point(6, 63);
-            button3.Name = "button3";
-            button3.Size = new Size(42, 35);
-            button3.TabIndex = 0;
-            button3.UseVisualStyleBackColor = true;
-            // 
-            // button2
-            // 
-            button2.Location = new Point(54, 22);
-            button2.Name = "button2";
-            button2.Size = new Size(42, 35);
-            button2.TabIndex = 0;
-            button2.UseVisualStyleBackColor = true;
-            // 
-            // button1
-            // 
-            button1.Location = new Point(6, 22);
-            button1.Name = "button1";
-            button1.Size = new Size(42, 35);
-            button1.TabIndex = 0;
-            button1.UseVisualStyleBackColor = true;
-            button1.Click += button1_Click;
             // 
             // tabPage2
             // 
@@ -297,30 +181,18 @@
             btn_Open.UseVisualStyleBackColor = true;
             btn_Open.Click += btn_Open_Click;
             // 
-            // Rigth_Panel_GropBox
-            // 
-            Rigth_Panel_GropBox.Location = new Point(1525, 91);
-            Rigth_Panel_GropBox.Name = "Rigth_Panel_GropBox";
-            Rigth_Panel_GropBox.Size = new Size(174, 830);
-            Rigth_Panel_GropBox.TabIndex = 4;
-            Rigth_Panel_GropBox.TabStop = false;
-            Rigth_Panel_GropBox.Text = "편집 속성";
-            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1711, 954);
-            Controls.Add(Rigth_Panel_GropBox);
             Controls.Add(groupBox2);
             Controls.Add(tabControl1);
-            Controls.Add(groupBox1);
             Controls.Add(menuStrip1);
             MainMenuStrip = menuStrip1;
             Name = "Form1";
             Text = "Form1";
             Load += Form1_Load;
-            groupBox1.ResumeLayout(false);
             tabPage2.ResumeLayout(false);
             tabPage2.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).EndInit();
@@ -333,22 +205,10 @@
         }
 
         #endregion
-
-        private GroupBox groupBox1;
-        private Button button4;
-        private Button button3;
-        private Button button2;
-        private Button button1;
         private TabPage tabPage2;
         private TabControl tabControl1;
         private Button button12;
         private Button btn_Road;
-        private Button button10;
-        private Button button9;
-        private Button button8;
-        private Button button7;
-        private Button button6;
-        private Button button5;
         private MenuStrip menuStrip1;
         private ToolStripMenuItem toolStrip_File;
         private ToolStripMenuItem toolStrip_Open;
@@ -361,6 +221,5 @@
         private Button btn_NewFile;
         private PictureBox pictureBox1;
         private TableLayoutPanel tableLayoutPanel1;
-        private GroupBox Rigth_Panel_GropBox;
     }
 }
