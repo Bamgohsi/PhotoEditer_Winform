@@ -1,5 +1,6 @@
 using System;
 using System.Drawing;
+using System.Reflection;
 using System.Reflection.Metadata.Ecma335;
 using System.Windows.Forms;
 
@@ -9,7 +10,7 @@ namespace photo
     {
 
         //새로운 탭 번호를 세어주는 변수
-        private int tabCount = 1;
+        private int tabCount = 2;
         // 삭제된 번호 저장소
         private Stack<TabPage> deletedTabs = new Stack<TabPage>();
 
@@ -28,7 +29,7 @@ namespace photo
             InitializeComponent();
 
             // pictureBox1에 커스텀 그리기(Paint) 이벤트 연결
-            pictureBox1.Paint += pictureBox1_Paint;
+
         }
 
         private void button4_Click(object sender, EventArgs e)
@@ -40,9 +41,26 @@ namespace photo
         // pictureBox의 이미지 초기화
         private void btn_NewFile_Click(object sender, EventArgs e)
         {
-            pictureBox1.Image = null;
+            TabPage currentTab = tabControl1.SelectedTab;
+
+            if (currentTab != null)
+            {
+                // 탭 안의 모든 PictureBox 제거
+                var pictureBoxesToRemove = currentTab.Controls
+                    .OfType<PictureBox>()
+                    .ToList(); // 컬렉션 수정 오류 방지 위해 리스트로 복사
+
+                foreach (var pb in pictureBoxesToRemove)
+                {
+                    currentTab.Controls.Remove(pb);
+                    pb.Dispose(); // 리소스 해제
+                }
+
+            }
         }
 
+        // 픽쳐박스 자리
+        int X = 30;
         // [열기] 버튼 클릭 시 실행
         // 이미지 파일을 선택하고 pictureBox에 로드
         private void btn_Open_Click(object sender, EventArgs e)
@@ -53,163 +71,209 @@ namespace photo
 
             if (openFileDialog.ShowDialog() == DialogResult.OK)
             {
+                string filePath = openFileDialog.FileName;
+
                 try
                 {
-                    // 기존 이미지가 있을 경우 메모리 해제
-                    pictureBox1.Image?.Dispose();
+                    TabPage currentTab = tabControl1.SelectedTab;
 
-                    // 새로운 이미지 로드
-                    Image img = Image.FromFile(openFileDialog.FileName);
-                    pictureBox1.Image = img;
+                    // 새 PictureBox 생성
+                    PictureBox pb = new PictureBox();
+                    pb.SizeMode = PictureBoxSizeMode.AutoSize;
+                    pb.Location = new Point(10, 30 + X); // 위치는 아래 함수 참고
+                    EnableDoubleBuffering(pb);
 
-                    // 이미지 크기에 맞게 PictureBox 크기 조절
-                    pictureBox1.SizeMode = PictureBoxSizeMode.AutoSize;
-                    pictureBox1.Size = img.Size;
+                    pb.Image = Image.FromFile(filePath);
+                    pb.Size = pb.Image.Size;
 
-                    // pictureBox 위치 설정 (좌측 상단 여백)
-                    pictureBox1.Location = new Point(10, 10);
+                    pb.MouseDown += pictureBox_MouseDown;
+                    pb.MouseMove += pictureBox_MouseMove;
+                    pb.MouseUp += pictureBox_MouseUp;
+                    pb.Paint += pictureBox_Paint;
+
+
+
+                    // 현재 탭에 추가
+                    currentTab.Controls.Add(pb);
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("이미지를 불러오는 중 오류 발생: " + ex.Message);
+                    MessageBox.Show("이미지를 불러오는 중 오류 발생:\n" + ex.Message);
                 }
             }
         }
+
 
         // [저장] 버튼 클릭 시 실행 (추후 구현 예정)
         private void btn_Save_Click(object sender, EventArgs e)        // TODO: 저장 기능 구현 (찬송)
         {
-            // 픽쳐박스에 넣은 사진일 없을 때
-            if (pictureBox1.Image == null)
+            TabPage currentTab = tabControl1.SelectedTab;
+
+            // 현재 탭 내 모든 PictureBox 수집
+            var pictureBoxes = currentTab.Controls
+                .OfType<PictureBox>()
+                .Where(pb => pb.Image != null)
+                .ToList();
+
+            if (pictureBoxes.Count == 0)
             {
                 MessageBox.Show("저장할 이미지가 없습니다.");
                 return;
             }
+
+            // 전체 병합 이미지의 크기를 계산 (모든 PictureBox의 위치 + 크기 고려)
+            int maxRight = 0;
+            int maxBottom = 0;
+            foreach (var pb in pictureBoxes)
+            {
+                maxRight = Math.Max(maxRight, pb.Right);
+                maxBottom = Math.Max(maxBottom, pb.Bottom);
+            }
+
+            Bitmap combinedImage = new Bitmap(maxRight, maxBottom);
+            using (Graphics g = Graphics.FromImage(combinedImage))
+            {
+                g.Clear(Color.White); // 배경 흰색
+
+                foreach (var pb in pictureBoxes)
+                {
+                    g.DrawImage(pb.Image, pb.Location);
+                }
+            }
+
+            // 저장 다이얼로그
             SaveFileDialog saveFileDialog = new SaveFileDialog();
             saveFileDialog.Title = "이미지 저장";
-            saveFileDialog.Filter = "이미지 파일|*.jpg;*.jpeg;*.png;*.bmp;*.gif";
-
+            saveFileDialog.Filter = "JPEG 파일 (*.jpg;*.jpeg)|*.jpg;*.jpeg|PNG 파일 (*.png)|*.png|BMP 파일 (*.bmp)|*.bmp|GIF 파일 (*.gif)|*.gif";
 
             if (saveFileDialog.ShowDialog() == DialogResult.OK)
             {
+                string ext = Path.GetExtension(saveFileDialog.FileName).ToLower();
+                var format = System.Drawing.Imaging.ImageFormat.Png;
+
+                switch (ext)
+                {
+                    case ".jpg":
+                    case ".jpeg":
+                        format = System.Drawing.Imaging.ImageFormat.Jpeg;
+                        break;
+                    case ".bmp":
+                        format = System.Drawing.Imaging.ImageFormat.Bmp;
+                        break;
+                    case ".gif":
+                        format = System.Drawing.Imaging.ImageFormat.Gif;
+                        break;
+                    case ".png":
+                        format = System.Drawing.Imaging.ImageFormat.Png;
+                        break;
+                    default:
+                        MessageBox.Show("지원하지 않는 파일 형식입니다.");
+                        return;
+                }
+
                 try
                 {
-                    System.Drawing.Imaging.ImageFormat format = System.Drawing.Imaging.ImageFormat.Png;
-                    string extension = System.IO.Path.GetExtension(saveFileDialog.FileName).ToLower();
-
-                    switch (extension)
-                    {
-                        case ".jpg":
-                        case ".jpeg":
-                            format = System.Drawing.Imaging.ImageFormat.Jpeg;
-                            break;
-                        case ".bmp":
-                            format = System.Drawing.Imaging.ImageFormat.Bmp;
-                            break;
-                        case ".png":
-                            format = System.Drawing.Imaging.ImageFormat.Bmp;
-                            break;
-                        case ".gif":
-                            format = System.Drawing.Imaging.ImageFormat.Bmp;
-                            break;
-                    }
-
-                    pictureBox1.Image.Save(saveFileDialog.FileName, format);
-                    MessageBox.Show("이미지가 성공적으로 저장되었습니다.");
+                    combinedImage.Save(saveFileDialog.FileName, format);
+                    MessageBox.Show("모든 이미지가 하나로 저장되었습니다.");
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"이미지 저장 중 오류가 발생했습니다:\n{ex.Message}");
+                    MessageBox.Show($"이미지 저장 중 오류 발생:\n{ex.Message}");
                 }
             }
+
+            combinedImage.Dispose(); // 리소스 해제
         }
 
-        // 마우스 버튼을 누를 때 호출됨
-        // 드래그 시작 처리 및 선택 테두리 표시
-        private void pictureBox1_MouseDown(object sender, MouseEventArgs e)
-        {
-            if (pictureBox1.Image != null && e.Button == MouseButtons.Left)
-            {
-                isDragging = true;          // 드래그 시작
-                clickOffset = e.Location;   // 마우스 클릭 좌표 저장
-                showSelectionBorder = true; // 테두리 표시 ON
-                pictureBox1.Invalidate();   // 다시 그리기 요청 (Paint 호출)
-            }
-        }
 
-        // 마우스를 이동할 때 호출됨 (드래그 중일 때만)
-        private void pictureBox1_MouseMove(object sender, MouseEventArgs e)
-        {
-            if (isDragging)
-            {
-                // 기존 위치에서 마우스 이동만큼 offset 적용
-                Point newLocation = pictureBox1.Location;
-                newLocation.X += e.X - clickOffset.X;
-                newLocation.Y += e.Y - clickOffset.Y;
 
-                // PictureBox 위치 갱신
-                pictureBox1.Location = newLocation;
-            }
-        }
 
-        // 마우스 버튼을 놓을 때 호출됨
-        // 드래그 종료 및 선택 테두리 해제
-        private void pictureBox1_MouseUp(object sender, MouseEventArgs e)
-        {
-            isDragging = false;
-
-            // 선택 해제하고 싶을 경우 주석 해제
-            showSelectionBorder = false;
-
-            // 다시 그리기 요청 (Paint 호출)
-            pictureBox1.Invalidate();
-        }
 
         // 폼 로드 시 실행 (필요 시 초기화 처리 가능)
         private void Form1_Load(object sender, EventArgs e)
         {
             // 현재는 비어 있음
         }
-        // pictureBox1이 다시 그려질 때 호출됨
-        // 선택 테두리를 그림
-        private void pictureBox1_Paint(object sender, PaintEventArgs e)
+
+        int tabNumber;
+        private Stack<int> deletedTabNumbers = new Stack<int>();  // 삭제된 탭 번호만 저장
+        private void btnNewTabPage_Click(object sender, EventArgs e)       //탭페이지 추가 버튼 이벤트         
         {
-            if (showSelectionBorder)
+
+
+            // 삭제된 번호 우선 재사용
+            if (deletedTabNumbers.Count > 0)
+            {
+                tabNumber = deletedTabNumbers.Pop();
+            }
+            else
+            {
+                tabNumber = tabCount++;
+            }
+
+            TabPage newTabPage = new TabPage($"tp {tabNumber}");
+            newTabPage.Name = $"tp{tabNumber}";
+            newTabPage.BackColor = Color.White;
+
+            tabControl1.TabPages.Add(newTabPage);
+            tabControl1.SelectedTab = newTabPage;
+
+
+        }
+
+
+        // 공통 핸들러들
+        private void pictureBox_MouseDown(object sender, MouseEventArgs e)
+        {
+            PictureBox pb = sender as PictureBox;
+            if (pb?.Image != null && e.Button == MouseButtons.Left)
+            {
+                isDragging = true;
+                clickOffset = e.Location;
+                showSelectionBorder = true;
+                pb.Invalidate(); // 다시 그리기
+            }
+        }
+
+        private void pictureBox_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (isDragging && sender is PictureBox pb)
+            {
+                Point newLocation = pb.Location;
+                newLocation.X += e.X - clickOffset.X;
+                newLocation.Y += e.Y - clickOffset.Y;
+
+                pb.Location = newLocation;
+            }
+        }
+
+        private void pictureBox_MouseUp(object sender, MouseEventArgs e)
+        {
+            isDragging = false;
+            showSelectionBorder = false;
+
+            if (sender is PictureBox pb)
+                pb.Invalidate();
+        }
+        private void EnableDoubleBuffering(Control control)
+        {
+            typeof(Control).InvokeMember("DoubleBuffered",
+                BindingFlags.SetProperty | BindingFlags.Instance | BindingFlags.NonPublic,
+                null, control, new object[] { true });
+        }
+        private void pictureBox_Paint(object sender, PaintEventArgs e)
+        {
+            if (showSelectionBorder && sender is PictureBox pb)
             {
                 using (Pen pen = new Pen(Color.DeepSkyBlue, 2))
                 {
-                    // 실선으로 테두리 그리기 (점선은 DashStyle.Dot 등 사용 가능)
                     pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Solid;
-
-                    // 그림 테두리 사각형 정의 (이미지 전체)
-                    Rectangle rect = new Rectangle(0, 0, pictureBox1.Width - 1, pictureBox1.Height - 1);
-
-                    // 테두리 그리기
+                    Rectangle rect = new Rectangle(0, 0, pb.Width - 1, pb.Height - 1);
                     e.Graphics.DrawRectangle(pen, rect);
                 }
             }
         }
-
-        private void btnNewTabPage_Click(object sender, EventArgs e)       //탭페이지 추가 버튼 이벤트         
-        {
-            TabPage newTabPage = new TabPage($"tp {tabCount + 1}");
-
-            if (deletedTabs.Count > 0)
-            {
-                // 최근 삭제된 탭을 복원
-                newTabPage = deletedTabs.Pop();
-            }
-            else
-            {
-                // 새 탭 생성
-                tabCount++;
-            }
-            newTabPage.BackColor = Color.White;
-            // TabControl에 탭 추가
-            tabControl1.TabPages.Add(newTabPage);
-            // 새로 만든 탭으로 전환
-            tabControl1.SelectedTab = newTabPage;
-        }
+        private PictureBox selectedPictureBox = null;
 
         private void btnDltTabPage_Click(object sender, EventArgs e)   //탭페이지 삭제 버튼 이벤트
         {
@@ -218,19 +282,30 @@ namespace photo
                 MessageBox.Show("하나의 탭은 남아있어야 합니다.");
                 return;
             }
-            // 가장 마지막 탭 가져오기
-            int lastIndex = tabControl1.TabPages.Count - 1;
-            TabPage lastTab = tabControl1.TabPages[lastIndex];
+
             TabPage selectedTab = tabControl1.SelectedTab;
-            // 탭 제거
-            tabControl1.TabPages.Remove(lastTab);
 
+            if (selectedTab != null)
+            {
+                tabControl1.TabPages.Remove(selectedTab);
+                tabControl1.SelectedIndex = tabControl1.TabPages.Count - 1;
 
+                // 탭 이름과 내부 Name 속성 정렬
+                for (int i = 0; i < tabControl1.TabPages.Count; i++)
+                {
+                    TabPage tab = tabControl1.TabPages[i];
+                    tab.Text = $"tp {i + 1}";
+                    tab.Name = $"tp{i + 1}";
+                }
 
-            // 삭제하고 나서 마지막 탭을 자동으로 선택
-            tabControl1.SelectedIndex = tabControl1.TabPages.Count - 1;
-            deletedTabs.Push(selectedTab); // 삭제된 탭 저장
+                // 탭 개수 업데이트
+                tabCount = tabControl1.TabPages.Count + 1;
+
+                // 삭제된 번호 스택 비움 (순차 재정렬이므로 재사용 필요 없음)
+                deletedTabNumbers.Clear();
+            }
 
         }
     }
 }
+

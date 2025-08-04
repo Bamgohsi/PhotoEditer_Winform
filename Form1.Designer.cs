@@ -40,7 +40,6 @@
             button2 = new Button();
             button1 = new Button();
             tapPage = new TabPage();
-            pictureBox1 = new PictureBox();
             tabControl1 = new TabControl();
             menuStrip1 = new MenuStrip();
             toolStrip_File = new ToolStripMenuItem();
@@ -55,8 +54,6 @@
             btn_NewFile = new Button();
             btn_Open = new Button();
             groupBox1.SuspendLayout();
-            tapPage.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             tabControl1.SuspendLayout();
             menuStrip1.SuspendLayout();
             groupBox2.SuspendLayout();
@@ -167,26 +164,12 @@
             // tapPage
             // 
             tapPage.BackColor = Color.White;
-            tapPage.Controls.Add(pictureBox1);
             tapPage.Location = new Point(4, 24);
             tapPage.Name = "tapPage";
             tapPage.Padding = new Padding(3);
             tapPage.Size = new Size(581, 330);
             tapPage.TabIndex = 1;
             tapPage.Text = "tp1";
-            // 
-            // pictureBox1
-            // 
-            pictureBox1.BackgroundImageLayout = ImageLayout.Stretch;
-            pictureBox1.Location = new Point(61, 28);
-            pictureBox1.Name = "pictureBox1";
-            pictureBox1.Size = new Size(472, 427);
-            pictureBox1.SizeMode = PictureBoxSizeMode.AutoSize;
-            pictureBox1.TabIndex = 0;
-            pictureBox1.TabStop = false;
-            pictureBox1.MouseDown += pictureBox1_MouseDown;
-            pictureBox1.MouseMove += pictureBox1_MouseMove;
-            pictureBox1.MouseUp += pictureBox1_MouseUp;
             // 
             // tabControl1
             // 
@@ -317,9 +300,6 @@
             Text = "Form1";
             Load += Form1_Load;
             groupBox1.ResumeLayout(false);
-            tapPage.ResumeLayout(false);
-            tapPage.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)pictureBox1).EndInit();
             tabControl1.ResumeLayout(false);
             menuStrip1.ResumeLayout(false);
             menuStrip1.PerformLayout();
@@ -354,7 +334,6 @@
         private ToolStripMenuItem toolStrip_NewFile;
         private Button btn_Save;
         private Button btn_NewFile;
-        private PictureBox pictureBox1;
         private Button btnNewTabPage;
         private Button btnDltTabPage;
     }
