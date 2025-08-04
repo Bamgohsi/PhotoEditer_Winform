@@ -1,3 +1,4 @@
+using System.Drawing.Drawing2D;
 using System.Reflection;
 using System.Windows.Forms;
 
@@ -44,6 +45,23 @@ namespace photo
 
         // 현재 표시된 패널을 추적하는 변수
         private Panel currentVisiblePanel = null;
+
+        private PictureBox selectedImage = null;
+        private bool showSelectionBorderForImage = false;
+        private PictureBox draggingPictureBox = null;
+
+        private Image emojiPreviewImage = null;
+        private int emojiPreviewWidth = 64;
+        private int emojiPreviewHeight = 64;
+        private Point emojiPreviewLocation = Point.Empty;
+        private bool showEmojiPreview = false;
+
+        private PictureBox selectedEmoji = null;
+        private Point dragOffset;
+        private bool resizing = false;
+        private const int handleSize = 10;
+
+
         public Form1()
         {
             InitializeComponent();
@@ -51,10 +69,22 @@ namespace photo
             InitializeDynamicControls(); // This will also use the updated client size for panel positioning
             this.Resize += Form1_Resize;
             this.WindowState = FormWindowState.Maximized; // 실행 시 전체화면
+            this.MouseDown += Form1_MouseDown;
 
+            textBox1.KeyPress += TextBox_OnlyNumber_KeyPress;
+            textBox2.KeyPress += TextBox_OnlyNumber_KeyPress;
 
 
         }
+        private void TextBox_OnlyNumber_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            // 숫자 또는 백스페이스만 허용
+            if (!char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar))
+            {
+                e.Handled = true;
+            }
+        }
+
         private const int LeftPanelWidth = 80; // 왼쪽 버튼들이 차지하는 영역 너비
 
         private void Form1_Resize(object sender, EventArgs e)
@@ -84,7 +114,7 @@ namespace photo
             // 탭컨트롤 위치 및 크기 조정
             tabControl1.Location = new Point(totalLeft, TopMargin);
             tabControl1.Size = new Size(
-                this.ClientSize.Width - totalLeft - PanelWidth - PanelRightMargin-15,
+                this.ClientSize.Width - totalLeft - PanelWidth - PanelRightMargin - 15,
                 this.ClientSize.Height - TopMargin - BottomMargin
             );
 
@@ -131,8 +161,6 @@ namespace photo
             openFileDialog.Title = "이미지 열기";
             openFileDialog.Filter = "이미지 파일|*.jpg;*.jpeg;*.png;*.bmp;*.gif";
 
-            
-
             if (openFileDialog.ShowDialog() == DialogResult.OK)
             {
                 string filePath = openFileDialog.FileName;
@@ -141,34 +169,41 @@ namespace photo
                 {
                     TabPage currentTab = tabControl1.SelectedTab;
 
-                    // 새 PictureBox 생성
                     PictureBox pb = new PictureBox();
+                    pb.AllowDrop = true;
+                    pb.DragEnter += PictureBox_DragEnter;
+                    pb.DragOver += PictureBox_DragOver;
+                    pb.DragLeave += PictureBox_DragLeave;
+                    pb.DragDrop += PictureBox_DragDrop;
+                    pb.MouseMove += pictureBox_MouseMove;
                     pb.SizeMode = PictureBoxSizeMode.AutoSize;
-                    pb.Location = new Point(10, 30 + X); // 위치는 아래 함수 참고
+                    pb.Location = new Point(10, 30 + X);
                     EnableDoubleBuffering(pb);
+
+                    Bitmap originalCopy; // 변수 선언을 먼저
 
                     using (var original = new Bitmap(Image.FromFile(filePath)))
                     {
-                        Bitmap originalCopy = new Bitmap(original); // 이미지 원본 복사
-                        pb.Image = new Bitmap(originalCopy);        // 화면 표시용 이미지
-                        pb.Size = pb.Image.Size;
-
-                        // 리스트에 원본 저장
-                        imageList.Add((pb, originalCopy));
+                        originalCopy = new Bitmap(original); // 할당만 내부에서
                     }
 
-                    pb.Image = Image.FromFile(filePath);
+                    pb.Image = new Bitmap(originalCopy);
                     pb.Size = pb.Image.Size;
+                    pb.Tag = originalCopy; // ? 원본 저장
+                    imageList.Add((pb, originalCopy));
 
+                    // 핸들러 연결
+                    pb.MouseDown += Image_MouseDown;
+                    pb.Paint += Image_Paint;
                     pb.MouseDown += pictureBox_MouseDown;
                     pb.MouseMove += pictureBox_MouseMove;
                     pb.MouseUp += pictureBox_MouseUp;
-                    pb.Paint += pictureBox_Paint;
 
-
-
-                    // 현재 탭에 추가
                     currentTab.Controls.Add(pb);
+
+                    textBox1.Text = pb.Width.ToString();
+                    textBox2.Text = pb.Height.ToString();
+                    selectedImage = pb;
                 }
                 catch (Exception ex)
                 {
@@ -177,6 +212,140 @@ namespace photo
             }
         }
 
+        private void PictureBox_DragDrop(object sender, DragEventArgs e)
+        {
+            var basePictureBox = sender as PictureBox;
+            if (basePictureBox == null || basePictureBox.Image == null || emojiPreviewImage == null)
+            {
+                showEmojiPreview = false;
+                basePictureBox?.Invalidate();
+                return;
+            }
+
+            PictureBox newEmoji = new PictureBox
+            {
+                Image = (Image)emojiPreviewImage.Clone(),
+                SizeMode = PictureBoxSizeMode.StretchImage,
+                Size = new Size(emojiPreviewWidth, emojiPreviewHeight),
+                Location = new Point(
+                    emojiPreviewLocation.X - emojiPreviewWidth / 2,
+                    emojiPreviewLocation.Y - emojiPreviewHeight / 2),
+                BackColor = Color.Transparent,
+                Cursor = Cursors.SizeAll,
+                Tag = "selected"
+            };
+
+            newEmoji.MouseDown += Emoji_MouseDown;
+            newEmoji.MouseMove += Emoji_MouseMove;
+            newEmoji.MouseUp += Emoji_MouseUp;
+            newEmoji.Paint += Emoji_Paint;
+
+            basePictureBox.Controls.Add(newEmoji);
+            selectedEmoji = newEmoji;
+            showEmojiPreview = false;
+            basePictureBox.Invalidate();
+        }
+        private void Emoji_MouseDown(object sender, MouseEventArgs e)
+        {
+            foreach (Control c in ((Control)sender).Parent.Controls)
+            {
+                if (c is PictureBox pic && pic != sender)
+                {
+                    pic.Tag = null;
+                    pic.Invalidate();
+                }
+            }
+
+            selectedEmoji = sender as PictureBox;
+            if (selectedEmoji != null)
+            {
+                selectedEmoji.Tag = "selected";
+                selectedEmoji.Invalidate();
+
+                if (e.Button == MouseButtons.Left)
+                {
+                    Rectangle resizeHandle = new Rectangle(
+                        selectedEmoji.Width - handleSize,
+                        selectedEmoji.Height - handleSize,
+                        handleSize, handleSize);
+
+                    resizing = resizeHandle.Contains(e.Location);
+                    if (!resizing)
+                        dragOffset = e.Location;
+                }
+            }
+        }
+
+        private void Emoji_MouseMove(object sender, MouseEventArgs e)
+        {
+            var emoji = sender as PictureBox;
+            var parent = emoji?.Parent as PictureBox;
+
+            if (e.Button == MouseButtons.Left && selectedEmoji == emoji && parent != null)
+            {
+                if (resizing)
+                {
+                    int newW = Math.Max(32, e.X);
+                    int newH = Math.Max(32, e.Y);
+                    newW = Math.Min(newW, parent.Width - emoji.Left);
+                    newH = Math.Min(newH, parent.Height - emoji.Top);
+                    emoji.Size = new Size(newW, newH);
+                }
+                else
+                {
+                    Point newLoc = emoji.Location;
+                    newLoc.Offset(e.X - dragOffset.X, e.Y - dragOffset.Y);
+                    newLoc.X = Math.Max(0, Math.Min(newLoc.X, parent.Width - emoji.Width));
+                    newLoc.Y = Math.Max(0, Math.Min(newLoc.Y, parent.Height - emoji.Height));
+                    emoji.Location = newLoc;
+                }
+                emoji.Invalidate();
+            }
+        }
+
+        private void Emoji_MouseUp(object sender, MouseEventArgs e)
+        {
+            resizing = false;
+        }
+
+        private void Emoji_Paint(object sender, PaintEventArgs e)
+        {
+            var emoji = sender as PictureBox;
+            if (emoji.Tag != null && emoji.Tag.ToString() == "selected")
+            {
+                using (Pen pen = new Pen(Color.DeepSkyBlue, 2))
+                    e.Graphics.DrawRectangle(pen, 1, 1, emoji.Width - 3, emoji.Height - 3);
+
+                e.Graphics.FillRectangle(Brushes.DeepSkyBlue,
+                    emoji.Width - handleSize,
+                    emoji.Height - handleSize,
+                    handleSize, handleSize);
+            }
+        }
+
+
+        private void PictureBox_DragEnter(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(typeof(Bitmap)) || e.Data.GetDataPresent(typeof(Image)))
+                e.Effect = DragDropEffects.Copy;
+            else
+                e.Effect = DragDropEffects.None;
+        }
+
+        private void PictureBox_DragOver(object sender, DragEventArgs e)
+        {
+            Point clientPos = ((PictureBox)sender).PointToClient(new Point(e.X, e.Y));
+            emojiPreviewLocation = clientPos;
+            showEmojiPreview = true;
+            ((PictureBox)sender).Invalidate();
+            e.Effect = DragDropEffects.Copy;
+        }
+
+        private void PictureBox_DragLeave(object sender, EventArgs e)
+        {
+            showEmojiPreview = false;
+            ((PictureBox)sender).Invalidate();
+        }
 
         // [저장] 버튼 클릭 시 실행 (추후 구현 예정)
         private void btn_Save_Click(object sender, EventArgs e)        // TODO: 저장 기능 구현 (찬송)
@@ -266,7 +435,10 @@ namespace photo
         // 폼 로드 시 실행 (필요 시 초기화 처리 가능)
         private void Form1_Load(object sender, EventArgs e)
         {
-            // 현재는 비어 있음
+            foreach (TabPage tab in tabControl1.TabPages)
+            {
+                tab.MouseDown += TabPage_MouseDown;
+            }
         }
 
         int tabNumber;
@@ -290,6 +462,9 @@ namespace photo
             newTabPage.Name = $"tp{tabNumber}";
             newTabPage.BackColor = Color.White;
 
+            // 선택 해제용 이벤트 연결
+            newTabPage.MouseDown += TabPage_MouseDown;
+
             tabControl1.TabPages.Add(newTabPage);
             tabControl1.SelectedTab = newTabPage;
 
@@ -300,31 +475,48 @@ namespace photo
         // 공통 핸들러들
         private void pictureBox_MouseDown(object sender, MouseEventArgs e)
         {
-            PictureBox pb = sender as PictureBox;
-            if (pb?.Image != null && e.Button == MouseButtons.Left)
+            if (sender is PictureBox pb && pb.Image != null && e.Button == MouseButtons.Left)
             {
                 isDragging = true;
+                draggingPictureBox = pb;
                 clickOffset = e.Location;
                 showSelectionBorder = true;
-                pb.Invalidate(); // 다시 그리기
+                pb.Invalidate();
             }
         }
 
         private void pictureBox_MouseMove(object sender, MouseEventArgs e)
         {
-            if (isDragging && sender is PictureBox pb)
+            if (isDragging && draggingPictureBox != null)
             {
-                Point newLocation = pb.Location;
-                newLocation.X += e.X - clickOffset.X;
-                newLocation.Y += e.Y - clickOffset.Y;
+                Point mousePos = draggingPictureBox.Parent.PointToClient(MousePosition);
+                draggingPictureBox.Location = new Point(mousePos.X - clickOffset.X, mousePos.Y - clickOffset.Y);
+            }
 
-                pb.Location = newLocation;
+            // 커서 모양 계산은 그대로 유지
+            if (sender is PictureBox pic)
+            {
+                const int edge = 5;
+                bool atTop = e.Y <= edge;
+                bool atBottom = e.Y >= pic.Height - edge;
+                bool atLeft = e.X <= edge;
+                bool atRight = e.X >= pic.Width - edge;
+
+                if (atTop && atLeft) pic.Cursor = Cursors.SizeNWSE;
+                else if (atTop && atRight) pic.Cursor = Cursors.SizeNESW;
+                else if (atBottom && atLeft) pic.Cursor = Cursors.SizeNESW;
+                else if (atBottom && atRight) pic.Cursor = Cursors.SizeNWSE;
+                else if (atTop || atBottom) pic.Cursor = Cursors.SizeNS;
+                else if (atLeft || atRight) pic.Cursor = Cursors.SizeWE;
+                else pic.Cursor = Cursors.Default;
             }
         }
+
 
         private void pictureBox_MouseUp(object sender, MouseEventArgs e)
         {
             isDragging = false;
+            draggingPictureBox = null;
             showSelectionBorder = false;
 
             if (sender is PictureBox pb)
@@ -462,47 +654,15 @@ namespace photo
                 currentTab.AutoScrollMinSize = new Size(maxRight + 50, maxBottom + 50);
             }
         }
-            /// <summary>
-            /// 버튼과 패널을 동적으로 생성하고 초기화합니다.
-            /// </summary>
+        /// <summary>
+        /// 버튼과 패널을 동적으로 생성하고 초기화합니다.
+        /// </summary>
         private void InitializeDynamicControls()
         {
-            // 버튼 관련 설정
-            int buttonWidth = 40;
-            int buttonHeight = 40;
-            int spacing = 10;
-            int startX = 15;
-            int startY = 95;
-            int columns = 2; // 2열로 배치
-            int buttonCount = 10; // 총 버튼 개수
-
-            dynamicButtons = new Button[buttonCount];
-
-            // 2열 5행으로 버튼 배치
-            for (int i = 0; i < buttonCount; i++)
-            {
-                Button btn = new Button();
-                btn.Text = $"{i + 1}"; // 버튼 텍스트를 숫자로 설정
-                btn.Size = new Size(buttonWidth, buttonHeight);
-
-                // 버튼 위치 계산 (2열 5행)
-                int col = i % columns;
-                int row = i / columns;
-                btn.Location = new Point(startX + col * (buttonWidth + spacing),
-                                         startY + row * (buttonHeight + spacing));
-
-                btn.Tag = i; // 버튼에 인덱스 저장
-                btn.Click += Button_Click; // 클릭 이벤트 핸들러 연결
-                this.Controls.Add(btn);
-                dynamicButtons[i] = btn;
-            }
-
-            // 패널 관련 설정
+            // 1. 먼저 패널 생성
             int panelCount = 10;
             dynamicPanels = new Panel[panelCount];
 
-            // 패널 위치는 오른쪽 상단으로 고정
-            // Calculate panel location based on current client size
             Point panelLocation = new Point(this.ClientSize.Width - (PanelWidth + PanelRightMargin), TopMargin);
             Size panelSize = new Size(PanelWidth, this.ClientSize.Height - TopMargin - BottomMargin);
 
@@ -510,22 +670,119 @@ namespace photo
             {
                 Panel panel = new Panel()
                 {
-                    Location = panelLocation, // Use the calculated location
-                    Size = panelSize,         // Use the calculated size
+                    Location = panelLocation,
+                    Size = panelSize,
                     Visible = false,
-                    BorderStyle = BorderStyle.FixedSingle // 패널 경계선 추가
+                    BorderStyle = BorderStyle.FixedSingle
                 };
 
-                // 패널에 라벨 추가
-                panel.Controls.Add(new Label() { Text = $"편집 속성 {i + 1}", Location = new Point(10, 10) });
+                panel.Controls.Add(new Label()
+                {
+                    Text = $"편집 속성 {i + 1}",
+                    Location = new Point(10, 10)
+                });
 
-                // 패널에 Paint 이벤트 핸들러 추가
                 panel.Paint += Panel_Paint;
 
                 this.Controls.Add(panel);
-                dynamicPanels[i] = panel; // 생성한 패널을 배열에 저장
+                dynamicPanels[i] = panel;
+            }
+
+            // 2. 버튼 생성
+            int buttonWidth = 40;
+            int buttonHeight = 40;
+            int spacing = 10;
+            int startX = 15;
+            int buttonStartY = 95;
+            int columns = 2;
+            int buttonCount = 10;
+
+            dynamicButtons = new Button[buttonCount];
+
+            for (int i = 0; i < buttonCount; i++)
+            {
+                Button btn = new Button();
+                btn.Text = $"{i + 1}";
+                btn.Size = new Size(buttonWidth, buttonHeight);
+
+                int col = i % columns;
+                int row = i / columns;
+
+                btn.Location = new Point(
+                    startX + col * (buttonWidth + spacing),
+                    buttonStartY + row * (buttonHeight + spacing));
+
+                btn.Tag = i;
+                btn.Click += Button_Click;
+
+                this.Controls.Add(btn);
+                dynamicButtons[i] = btn;
+            }
+
+            // 3. 이모지 PictureBox 추가 (패널 8번)
+            Panel panel8 = dynamicPanels[7];
+            panel8.AllowDrop = true;
+            panel8.AutoScroll = true;
+
+            Image[] emojis = {
+        Properties.Resources.Emoji1, Properties.Resources.Emoji2, Properties.Resources.Emoji3, Properties.Resources.Emoji4,
+                Properties.Resources.Emoji5, Properties.Resources.Emoji6, Properties.Resources.Emoji7, Properties.Resources.Emoji8,
+                Properties.Resources.Emoji9, Properties.Resources.Emoji10, Properties.Resources.Emoji11, Properties.Resources.Emoji12,
+                Properties.Resources.Emoji13, Properties.Resources.Emoji14, Properties.Resources.Emoji15, Properties.Resources.Emoji16,
+                Properties.Resources.Emoji17, Properties.Resources.Emoji18, Properties.Resources.Emoji19, Properties.Resources.Emoji20,
+                Properties.Resources.Emoji21, Properties.Resources.Emoji22, Properties.Resources.Emoji23, Properties.Resources.Emoji24,
+                Properties.Resources.Emoji25, Properties.Resources.Emoji26, Properties.Resources.Emoji27, Properties.Resources.Emoji28,
+                Properties.Resources.Emoji29, Properties.Resources.Emoji30, Properties.Resources.Emoji31, Properties.Resources.Emoji32,
+                Properties.Resources.Emoji33, Properties.Resources.Emoji34, Properties.Resources.Emoji35, Properties.Resources.Emoji36,
+                Properties.Resources.Emoji37, Properties.Resources.Emoji38, Properties.Resources.Emoji39, Properties.Resources.Emoji40,
+                Properties.Resources.Emoji41, Properties.Resources.Emoji42, Properties.Resources.Emoji43, Properties.Resources.Emoji44,
+                Properties.Resources.Emoji45, Properties.Resources.Emoji46, Properties.Resources.Emoji47, Properties.Resources.Emoji48,
+                Properties.Resources.Emoji49, Properties.Resources.Emoji50, Properties.Resources.Emoji51, Properties.Resources.Emoji52,
+                Properties.Resources.Emoji53, Properties.Resources.Emoji54, Properties.Resources.Emoji55, Properties.Resources.Emoji56,
+                Properties.Resources.Emoji57, Properties.Resources.Emoji58, Properties.Resources.Emoji59, Properties.Resources.Emoji60,
+                Properties.Resources.Emoji61, Properties.Resources.Emoji62, Properties.Resources.Emoji63, Properties.Resources.Emoji64,
+                Properties.Resources.Emoji65, Properties.Resources.Emoji66, Properties.Resources.Emoji67, Properties.Resources.Emoji68,
+                Properties.Resources.Emoji69
+    };
+
+            int iconSize = 48;
+            int emojiPadding = 8;
+            int emojiStartY = 50;
+
+            for (int i = 0; i < emojis.Length; i++)
+            {
+                var pic = new PictureBox
+                {
+                    Image = emojis[i],
+                    SizeMode = PictureBoxSizeMode.Zoom,
+                    Size = new Size(iconSize, iconSize),
+                    Cursor = Cursors.Hand,
+                    Location = new Point(
+                        emojiPadding + (i % 5) * 50,
+                        emojiStartY + i / 5 * (iconSize + emojiPadding))
+                };
+
+                pic.MouseDown += (s, e) =>
+                {
+                    if (e.Button == MouseButtons.Left)
+                    {
+                        emojiPreviewImage = ((PictureBox)s).Image;
+                        ((PictureBox)s).DoDragDrop(((PictureBox)s).Image, DragDropEffects.Copy);
+                    }
+                };
+
+                panel8.Controls.Add(pic);
+            }
+
+            // 4. 기본 패널 보이게 할 수도 있음
+            if (dynamicPanels.Length > 0)
+            {
+                currentVisiblePanel = dynamicPanels[0];
+                currentVisiblePanel.Visible = true;
+                currentVisiblePanel.Invalidate();
             }
         }
+
         // 모든 동적 버튼의 클릭 이벤트를 처리하는 단일 핸들러
         private void Button_Click(object sender, EventArgs e)
         {
@@ -593,7 +850,141 @@ namespace photo
                 }
             }
         }
+        private void Image_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (sender is PictureBox pb)
+            {
+                // 기존 선택 해제
+                if (selectedImage != null && selectedImage != pb)
+                {
+                    selectedImage.Invalidate(); // 기존 테두리 제거
+                }
+
+                selectedImage = pb;
+                showSelectionBorderForImage = true;
+                pb.Invalidate(); // 테두리 그리기 위해 다시 그리기
+            }
+        }
+        private void Image_Paint(object sender, PaintEventArgs e)
+        {
+            if (sender is PictureBox pb && pb == selectedImage && showSelectionBorderForImage)
+            {
+                using (Pen pen = new Pen(Color.DeepSkyBlue, 2))
+                {
+                    e.Graphics.DrawRectangle(pen, 1, 1, pb.Width - 2, pb.Height - 2);
+                }
+            }
+        }
+        private void Form1_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (selectedImage != null)
+            {
+                showSelectionBorderForImage = false;
+                selectedImage.Invalidate(); // 테두리 제거
+                selectedImage = null;
+            }
+        }
+        private void TabPage_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (selectedImage != null)
+            {
+                showSelectionBorderForImage = false;
+                selectedImage.Invalidate();
+                selectedImage = null;
+            }
+        }
+
+        private void btn_leftdegreeClick(object sender, EventArgs e)
+        {
+            if (selectedImage != null && selectedImage.Image != null)
+            {
+                selectedImage.Image.RotateFlip(RotateFlipType.Rotate270FlipNone);
+                selectedImage.Size = selectedImage.Image.Size;  // 회전 후 크기 반영
+                selectedImage.Invalidate();
+            }
+        }
+
+        private void btn_righthegreeClick(object sender, EventArgs e)
+        {
+            if (selectedImage != null && selectedImage.Image != null)
+            {
+                selectedImage.Image.RotateFlip(RotateFlipType.Rotate90FlipNone);
+                selectedImage.Size = selectedImage.Image.Size;  // 회전 후 크기 반영
+                selectedImage.Invalidate();
+            }
+        }
+
+        private void textBox1_TextChanged(object sender, EventArgs e)
+        {
+            UpdateSelectedImageSize();
+            if (int.TryParse(textBox1.Text, out int val))
+            {
+                int corrected = Math.Max(0, Math.Min(1000, val)); // 0~1000 사이로 보정
+
+                if (val != corrected)
+                {
+                    textBox1.TextChanged -= textBox1_TextChanged;
+                    textBox1.Text = corrected.ToString();
+                    textBox1.SelectionStart = textBox1.Text.Length; // 커서 끝으로 이동
+                    textBox1.TextChanged += textBox1_TextChanged;
+                }
+            }
+        }
+
+        private void textBox2_TextChanged(object sender, EventArgs e)
+        {
+            UpdateSelectedImageSize();
+            if (int.TryParse(textBox1.Text, out int val))
+            {
+                int corrected = Math.Max(0, Math.Min(1000, val)); // 0~1000 사이로 보정
+
+                if (val != corrected)
+                {
+                    textBox2.TextChanged -= textBox1_TextChanged;
+                    textBox2.Text = corrected.ToString();
+                    textBox2.SelectionStart = textBox2.Text.Length; // 커서 끝으로 이동
+                    textBox2.TextChanged += textBox1_TextChanged;
+                }
+            }
+        }
+
+        private void UpdateSelectedImageSize()
+        {
+            if (selectedImage == null)
+                return;
+
+            if (int.TryParse(textBox1.Text, out int width) && int.TryParse(textBox2.Text, out int height))
+            {
+                // 범위 제한: 최소 16, 최대 1000
+                width = Math.Max(16, Math.Min(1000, width));
+                height = Math.Max(16, Math.Min(1000, height));
+
+                //  텍스트박스도 반영되도록
+                if (textBox1.Text != width.ToString())
+                    textBox1.Text = width.ToString();
+                if (textBox2.Text != height.ToString())
+                    textBox2.Text = height.ToString();
+
+                if (selectedImage.Tag is Bitmap originalBitmap)
+                {
+                    Bitmap resized = new Bitmap(width, height);
+                    using (Graphics g = Graphics.FromImage(resized))
+                    {
+                        g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                        g.SmoothingMode = SmoothingMode.HighQuality;
+                        g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+                        g.CompositingQuality = CompositingQuality.HighQuality;
+                        g.Clear(Color.White);
+                        g.DrawImage(originalBitmap, 0, 0, width, height);
+                    }
+
+                    selectedImage.Image?.Dispose();
+                    selectedImage.Image = resized;
+                    selectedImage.Size = resized.Size;
+                    selectedImage.Invalidate();
+                }
+            }
+        }
 
     }
 }
-

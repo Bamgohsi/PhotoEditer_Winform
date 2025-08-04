@@ -37,6 +37,8 @@
             toolStripp_Save = new ToolStripMenuItem();
             toolStripMenuItem3 = new ToolStripMenuItem();
             groupBox2 = new GroupBox();
+            button2 = new Button();
+            button1 = new Button();
             button12 = new Button();
             button11 = new Button();
             btnDltTabPage = new Button();
@@ -44,6 +46,10 @@
             btn_Save = new Button();
             btn_NewFile = new Button();
             btn_Open = new Button();
+            label1 = new Label();
+            label2 = new Label();
+            textBox1 = new TextBox();
+            textBox2 = new TextBox();
             tabControl1.SuspendLayout();
             menuStrip1.SuspendLayout();
             groupBox2.SuspendLayout();
@@ -115,6 +121,12 @@
             // groupBox2
             // 
             groupBox2.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            groupBox2.Controls.Add(textBox2);
+            groupBox2.Controls.Add(textBox1);
+            groupBox2.Controls.Add(label2);
+            groupBox2.Controls.Add(label1);
+            groupBox2.Controls.Add(button2);
+            groupBox2.Controls.Add(button1);
             groupBox2.Controls.Add(button12);
             groupBox2.Controls.Add(button11);
             groupBox2.Controls.Add(btnDltTabPage);
@@ -127,6 +139,26 @@
             groupBox2.Size = new Size(1505, 41);
             groupBox2.TabIndex = 3;
             groupBox2.TabStop = false;
+            // 
+            // button2
+            // 
+            button2.Location = new Point(318, 12);
+            button2.Name = "button2";
+            button2.Size = new Size(58, 23);
+            button2.TabIndex = 4;
+            button2.Text = "오회";
+            button2.UseVisualStyleBackColor = true;
+            button2.Click += btn_righthegreeClick;
+            // 
+            // button1
+            // 
+            button1.Location = new Point(254, 12);
+            button1.Name = "button1";
+            button1.Size = new Size(58, 23);
+            button1.TabIndex = 3;
+            button1.Text = "왼회";
+            button1.UseVisualStyleBackColor = true;
+            button1.Click += btn_leftdegreeClick;
             // 
             // button12
             // 
@@ -198,6 +230,40 @@
             btn_Open.UseVisualStyleBackColor = true;
             btn_Open.Click += btn_Open_Click;
             // 
+            // label1
+            // 
+            label1.AutoSize = true;
+            label1.Location = new Point(407, 16);
+            label1.Name = "label1";
+            label1.Size = new Size(21, 15);
+            label1.TabIndex = 5;
+            label1.Text = "X :";
+            // 
+            // label2
+            // 
+            label2.AutoSize = true;
+            label2.Location = new Point(506, 16);
+            label2.Name = "label2";
+            label2.Size = new Size(21, 15);
+            label2.TabIndex = 5;
+            label2.Text = "Y :";
+            // 
+            // textBox1
+            // 
+            textBox1.Location = new Point(434, 13);
+            textBox1.Name = "textBox1";
+            textBox1.Size = new Size(56, 23);
+            textBox1.TabIndex = 6;
+            textBox1.TextChanged += textBox1_TextChanged;
+            // 
+            // textBox2
+            // 
+            textBox2.Location = new Point(533, 13);
+            textBox2.Name = "textBox2";
+            textBox2.Size = new Size(56, 23);
+            textBox2.TabIndex = 6;
+            textBox2.TextChanged += textBox2_TextChanged;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -214,6 +280,7 @@
             menuStrip1.ResumeLayout(false);
             menuStrip1.PerformLayout();
             groupBox2.ResumeLayout(false);
+            groupBox2.PerformLayout();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -236,5 +303,11 @@
         private Button btnDltTabPage;
         private Button button12;
         private Button button11;
+        private Button button2;
+        private Button button1;
+        private TextBox textBox2;
+        private TextBox textBox1;
+        private Label label2;
+        private Label label1;
     }
 }
