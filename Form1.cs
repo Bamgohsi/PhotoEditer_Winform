@@ -1,5 +1,6 @@
 using System;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 
 namespace photo
@@ -30,12 +31,23 @@ namespace photo
 
             // pictureBox1에 커스텀 그리기(Paint) 이벤트 연결
             pictureBox1.Paint += pictureBox1_Paint;
+
             this.WindowState = FormWindowState.Maximized; // 전체화면으로 시작
+
+            this.BackColor = Color.FromArgb(255, 25, 25, 25); // 폼의 배경색을 #191919 (R:25, G:25, B:25)로 설정
+
+            //CreateButtons(); // 버튼 생성 메서드 호출
+
+            // btn_NewFile 버튼 스타일 설정
+            btn_NewFile.BackColor = Color.FromArgb(255, 73, 80, 87); // 버튼 배경색을 #495057으로 설정
+            btn_NewFile.ForeColor = Color.FromArgb(255, 134, 142, 150); // 버튼 폰트 색상을 #868e96로 설정
+            btn_NewFile.FlatStyle = FlatStyle.Flat; // 버튼 스타일을 Flat으로 변경
+            btn_NewFile.FlatAppearance.BorderSize = 1; // 테두리를 보이게 변경
+            btn_NewFile.FlatAppearance.BorderColor = Color.FromArgb(255, 134, 142, 150); // 버튼 테두리 색상을 #868e96로 설정
         }
 
-        /// <summary>
         /// 버튼과 패널을 동적으로 생성하고 초기화합니다.
-        /// </summary>
+        /// 왼쪽 버튼
         private void InitializeDynamicControls()
         {
             // 버튼 관련 설정
@@ -52,9 +64,15 @@ namespace photo
             // 2열 5행으로 버튼 배치
             for (int i = 0; i < buttonCount; i++)
             {
+                // 기본 Button 클래스의 인스턴스를 생성합니다.
                 Button btn = new Button();
                 btn.Text = $"{i + 1}"; // 버튼 텍스트를 숫자로 설정
                 btn.Size = new Size(buttonWidth, buttonHeight);
+                btn.BackColor = Color.FromArgb(255, 73, 80, 87); // 버튼 배경색을 #343a40으로 설정
+                btn.ForeColor = Color.FromArgb(255, 134, 142, 150); // 버튼 폰트 색상을 #868e96로 설정
+                btn.FlatStyle = FlatStyle.Flat; // 버튼 스타일을 Flat으로 변경
+                btn.FlatAppearance.BorderSize = 1; // 테두리를 보이게 변경
+                btn.FlatAppearance.BorderColor = Color.FromArgb(255, 134, 142, 150); // 버튼 테두리 색상을 #868e96로 설정
 
                 // 버튼 위치 계산 (2열 5행)
                 int col = i % columns;
@@ -81,25 +99,23 @@ namespace photo
                 {
                     Location = panelLocation,
                     Size = panelSize,
+                    BackColor = Color.FromArgb(255, 73, 80, 87), // 패널 배경색을 변경
                     Visible = false
                 };
 
                 // 패널에 라벨 추가
-                panel.Controls.Add(new Label() { Text = $"편집 속성 {i + 1}", Location = new Point(10, 10) });
+                panel.Controls.Add(new Label()
+                {
+                    Text = $"편집 속성 {i + 1}",
+                    Location = new Point(10, 10),
+                    ForeColor = Color.White // 라벨 텍스트 색상을 흰색으로 설정
+                });
 
                 // 패널에 Paint 이벤트 핸들러 추가
                 panel.Paint += Panel_Paint;
 
                 this.Controls.Add(panel);
                 dynamicPanels[i] = panel; // 생성한 패널을 배열에 저장
-            }
-
-            // 첫 번째 패널을 초기 상태에서 보이게 설정하고, 테두리를 그리기 위해 Invalidate 호출
-            if (dynamicPanels.Length > 0)
-            {
-                currentVisiblePanel = dynamicPanels[0];
-                currentVisiblePanel.Visible = true;
-                currentVisiblePanel.Invalidate();
             }
         }
 
@@ -162,7 +178,7 @@ namespace photo
             if (paintedPanel != null && paintedPanel == currentVisiblePanel)
             {
                 // 테두리 색상을 검은색으로 변경
-                using (Pen pen = new Pen(Color.Black, 1))
+                using (Pen pen = new Pen(Color.Gray, 1))
                 {
                     pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Solid;
                     // 패널 경계에 테두리 그리기
@@ -172,36 +188,36 @@ namespace photo
             }
         }
 
-        // [새로 만들기] 버튼 클릭 시 실행
-        private void btn_NewFile_Click(object sender, EventArgs e)
-        {
-            pictureBox1.Image = null;
-        }
+        //// [새로 만들기] 버튼 클릭 시 실행
+        //private void btn_NewFile_Click(object sender, EventArgs e)
+        //{
+        //    pictureBox1.Image = null;
+        //}
 
-        // [열기] 버튼 클릭 시 실행
-        private void btn_Open_Click(object sender, EventArgs e)
-        {
-            OpenFileDialog openFileDialog = new OpenFileDialog();
-            openFileDialog.Title = "이미지 열기";
-            openFileDialog.Filter = "이미지 파일|*.jpg;*.jpeg;*.png;*.bmp;*.gif";
+        //// [열기] 버튼 클릭 시 실행
+        //private void btn_Open_Click(object sender, EventArgs e)
+        //{
+        //    OpenFileDialog openFileDialog = new OpenFileDialog();
+        //    openFileDialog.Title = "이미지 열기";
+        //    openFileDialog.Filter = "이미지 파일|*.jpg;*.jpeg;*.png;*.bmp;*.gif";
 
-            if (openFileDialog.ShowDialog() == DialogResult.OK)
-            {
-                try
-                {
-                    pictureBox1.Image?.Dispose();
-                    Image img = Image.FromFile(openFileDialog.FileName);
-                    pictureBox1.Image = img;
-                    pictureBox1.SizeMode = PictureBoxSizeMode.AutoSize;
-                    pictureBox1.Size = img.Size;
-                    pictureBox1.Location = new Point(10, 10);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("이미지를 불러오는 중 오류 발생: " + ex.Message);
-                }
-            }
-        }
+        //    if (openFileDialog.ShowDialog() == DialogResult.OK)
+        //    {
+        //        try
+        //        {
+        //            pictureBox1.Image?.Dispose();
+        //            Image img = Image.FromFile(openFileDialog.FileName);
+        //            pictureBox1.Image = img;
+        //            pictureBox1.SizeMode = PictureBoxSizeMode.AutoSize;
+        //            pictureBox1.Size = img.Size;
+        //            pictureBox1.Location = new Point(10, 10);
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            MessageBox.Show("이미지를 불러오는 중 오류 발생: " + ex.Message);
+        //        }
+        //    }
+        //}
 
         // [저장] 버튼 클릭 시 실행 (추후 구현 예정)
         private void btn_Save_Click(object sender, EventArgs e)
@@ -245,6 +261,7 @@ namespace photo
         private void Form1_Load(object sender, EventArgs e)
         {
             // 초기화 로직
+            this.BackColor = Color.FromArgb(255, 52, 58, 64);
         }
 
         // pictureBox1이 다시 그려질 때 호출됨 (선택 테두리 그림)
