@@ -94,7 +94,7 @@ namespace photo
                 dynamicPanels[i] = panel; // 생성한 패널을 배열에 저장
             }
 
-            // 첫 번째 패널을 초기 상태에서 보이게 설정하고, 테두리를 그리기 위해 Invalidate 호출
+            // 첫 번째 패널을 초기 상태에서 보이게 설정하고, 테두리를 그리기 위해 Invalidate 호출//
             if (dynamicPanels.Length > 0)
             {
                 currentVisiblePanel = dynamicPanels[0];
