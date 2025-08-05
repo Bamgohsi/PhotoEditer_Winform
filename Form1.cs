@@ -10,9 +10,37 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using static photo.EditAction;
 
 namespace photo
 {
+    public class EditAction
+    {
+        public PictureBox PictureBox { get; set; }
+        public Bitmap Before { get; set; }
+        public Bitmap After { get; set; }
+        public Rectangle Bounds { get; set; }
+
+        public List<EmojiState> EmojisBefore { get; set; }
+        public List<EmojiState> EmojisAfter { get; set; }
+
+        public EditAction(PictureBox pb, Bitmap before, Bitmap after, List<EmojiState> emojisBefore = null, List<EmojiState> emojisAfter = null)
+        {
+            PictureBox = pb;
+            Before = before;
+            After = after;
+            if (pb != null) Bounds = pb.Bounds;
+            EmojisBefore = emojisBefore;
+            EmojisAfter = emojisAfter;
+        }
+
+        public class EmojiState
+        {
+            public Image Image { get; set; }
+            public Point Location { get; set; }
+            public Size Size { get; set; }
+        }
+    }
     public partial class Form1 : Form
     {
         // Constants for layout
@@ -29,6 +57,9 @@ namespace photo
         // 이미지를 제한 할 변수 추가
         private const float MIN_SCALE = 0.1f;
         private const float MAX_SCALE = 5.0f;
+
+        private Stack<EditAction> undoStack = new Stack<EditAction>();
+        private Stack<EditAction> redoStack = new Stack<EditAction>();
 
         //새로운 탭 번호를 세어주는 변수
         private int tabCount = 2;
@@ -77,7 +108,113 @@ namespace photo
             textBox2.Validating += textBox2_Validating;
             textBox1.KeyDown += TextBox_KeyDown_ApplyOnEnter;
             textBox2.KeyDown += TextBox_KeyDown_ApplyOnEnter;
+
+            this.KeyPreview = true;
+            this.KeyDown += Form1_KeyDown;
         }
+
+        // ④ 단축키로 Undo/Redo 호출
+        private void Form1_KeyDown(object sender, KeyEventArgs e)
+        {
+            // Ctrl+Z
+            if (e.Control && e.KeyCode == Keys.Z)
+            {
+                Undo();
+                e.Handled = true;
+            }
+            // Ctrl+Y
+            else if (e.Control && e.KeyCode == Keys.Y)
+            {
+                Redo();
+                e.Handled = true;
+            }
+        }
+
+        private void Undo()
+        {
+            if (undoStack.Count > 0)
+            {
+                var action = undoStack.Pop();
+                if (action.PictureBox != null)
+                {
+                    // 이모티콘 정보 저장
+                    var emojisNow = GetCurrentEmojis(action.PictureBox);
+                    redoStack.Push(new EditAction(action.PictureBox, (Bitmap)action.PictureBox.Image.Clone(), action.Before, emojisNow, action.EmojisBefore));
+
+                    action.PictureBox.Image?.Dispose();
+                    action.PictureBox.Image = (Bitmap)action.Before.Clone();
+                    action.PictureBox.Bounds = action.Bounds;
+
+                    // 이모티콘 복구!
+                    action.PictureBox.Controls.Clear();
+                    if (action.EmojisBefore != null)
+                    {
+                        foreach (var emoji in action.EmojisBefore)
+                        {
+                            var emojiPB = new PictureBox
+                            {
+                                Image = (Image)emoji.Image.Clone(),
+                                Location = emoji.Location,
+                                Size = emoji.Size,
+                                SizeMode = PictureBoxSizeMode.StretchImage,
+                                BackColor = Color.Transparent
+                            };
+                            // 핸들러 연결
+                            emojiPB.MouseDown += Emoji_MouseDown;
+                            emojiPB.MouseMove += Emoji_MouseMove;
+                            emojiPB.MouseUp += Emoji_MouseUp;
+                            emojiPB.Paint += Emoji_Paint;
+                            action.PictureBox.Controls.Add(emojiPB);
+                        }
+                    }
+                    action.PictureBox.Invalidate();
+                }
+            }
+        }
+
+
+        private void Redo()
+        {
+            if (redoStack.Count > 0)
+            {
+                var action = redoStack.Pop();
+                if (action.PictureBox != null)
+                {
+                    // Undo로 되돌릴 때 현재 이모티콘 정보 저장
+                    var emojisNow = GetCurrentEmojis(action.PictureBox);
+                    undoStack.Push(new EditAction(action.PictureBox, (Bitmap)action.PictureBox.Image.Clone(), action.After, emojisNow, action.EmojisAfter));
+
+                    action.PictureBox.Image?.Dispose();
+                    action.PictureBox.Image = (Bitmap)action.After.Clone();
+                    action.PictureBox.Bounds = action.Bounds;
+
+                    // 이모티콘 복구!
+                    action.PictureBox.Controls.Clear();
+                    if (action.EmojisAfter != null)
+                    {
+                        foreach (var emoji in action.EmojisAfter)
+                        {
+                            var emojiPB = new PictureBox
+                            {
+                                Image = (Image)emoji.Image.Clone(),
+                                Location = emoji.Location,
+                                Size = emoji.Size,
+                                SizeMode = PictureBoxSizeMode.StretchImage,
+                                BackColor = Color.Transparent
+                            };
+                            emojiPB.MouseDown += Emoji_MouseDown;
+                            emojiPB.MouseMove += Emoji_MouseMove;
+                            emojiPB.MouseUp += Emoji_MouseUp;
+                            emojiPB.Paint += Emoji_Paint;
+                            action.PictureBox.Controls.Add(emojiPB);
+                        }
+                    }
+                    action.PictureBox.Invalidate();
+                }
+            }
+        }
+
+
 
         private void TextBox_KeyDown_ApplyOnEnter(object sender, KeyEventArgs e)
         {
@@ -126,6 +263,21 @@ namespace photo
             );
 
             groupBox2.Width = this.ClientSize.Width - 24;
+        }
+
+        private List<EmojiState> GetCurrentEmojis(PictureBox parent)
+        {
+            var list = new List<EmojiState>();
+            foreach (PictureBox emoji in parent.Controls.OfType<PictureBox>())
+            {
+                list.Add(new EmojiState
+                {
+                    Image = (Image)emoji.Image.Clone(),
+                    Location = emoji.Location,
+                    Size = emoji.Size
+                });
+            }
+            return list;
         }
 
         private void btn_NewFile_Click(object sender, EventArgs e)
@@ -411,6 +563,22 @@ namespace photo
                 return;
             }
 
+            // --------------------------
+            // 1. 추가 전 상태 Undo에 저장
+            // --------------------------
+            var emojisBefore = GetCurrentEmojis(basePictureBox);
+            undoStack.Push(new EditAction(
+                basePictureBox,
+                (Bitmap)basePictureBox.Image.Clone(),
+                null,
+                emojisBefore, // 이모티콘 추가 전 상태 저장!
+                null
+            ));
+            redoStack.Clear();
+
+            // --------------------------
+            // 2. 이모티콘 실제 추가
+            // --------------------------
             PictureBox newEmoji = new PictureBox
             {
                 Image = (Image)emojiPreviewImage.Clone(),
@@ -432,7 +600,18 @@ namespace photo
             selectedEmoji = newEmoji;
             showEmojiPreview = false;
             basePictureBox.Invalidate();
+
+            // -----------------------------------------------
+            // 3. 추가 후 상태를 After/EmojisAfter로 저장!
+            // -----------------------------------------------
+            if (undoStack.Count > 0)
+            {
+                var top = undoStack.Peek();
+                top.After = (Bitmap)basePictureBox.Image.Clone();
+                top.EmojisAfter = GetCurrentEmojis(basePictureBox); // 추가 후 상태 저장
+            }
         }
+
 
         private void Emoji_MouseDown(object sender, MouseEventArgs e)
         {
@@ -889,6 +1068,9 @@ namespace photo
             {
                 return;
             }
+            var emojisBefore = GetCurrentEmojis(selectedImage);
+            undoStack.Push(new EditAction(selectedImage, (Bitmap)selectedImage.Image.Clone(), null));
+            redoStack.Clear();
 
             // 원본 비트맵을 기반으로 새 비트맵 생성 (여기에 그림)
             Bitmap newBitmap = new Bitmap(selectedImage.Image);
@@ -911,6 +1093,9 @@ namespace photo
                 oldBitmap.Dispose();
             }
             selectedImage.Tag = new Bitmap(newBitmap);
+
+            if (undoStack.Count > 0)
+                undoStack.Peek().After = (Bitmap)selectedImage.Image.Clone();
 
 
             // 사용이 끝난 이모티콘 컨트롤들은 모두 제거
@@ -1106,17 +1291,25 @@ namespace photo
 
         private void btn_leftdegreeClick(object sender, EventArgs e)
         {
-            // 선택된 모든 이미지에 적용
             foreach (var pb in selectedImages)
             {
                 if (pb != null && pb.Image != null)
                 {
+                    // ★ 편집 전 상태 저장
+                    undoStack.Push(new EditAction(pb, (Bitmap)pb.Image.Clone(), null));
+                    redoStack.Clear();
+
                     pb.Image.RotateFlip(RotateFlipType.Rotate270FlipNone);
                     pb.Size = pb.Image.Size;
                     pb.Invalidate();
+
+                    // ★ 편집 후 상태 저장 (필수)
+                    if (undoStack.Count > 0)
+                        undoStack.Peek().After = (Bitmap)pb.Image.Clone();
                 }
             }
         }
+
 
         private void btn_righthegreeClick(object sender, EventArgs e)
         {
@@ -1125,9 +1318,17 @@ namespace photo
             {
                 if (pb != null && pb.Image != null)
                 {
-                    pb.Image.RotateFlip(RotateFlipType.Rotate90FlipNone);
+                    // ★ 편집 전 상태 저장
+                    undoStack.Push(new EditAction(pb, (Bitmap)pb.Image.Clone(), null));
+                    redoStack.Clear();
+
+                    pb.Image.RotateFlip(RotateFlipType.Rotate270FlipNone);
                     pb.Size = pb.Image.Size;
                     pb.Invalidate();
+
+                    // ★ 편집 후 상태 저장 (필수)
+                    if (undoStack.Count > 0)
+                        undoStack.Peek().After = (Bitmap)pb.Image.Clone();
                 }
             }
         }
@@ -1145,6 +1346,8 @@ namespace photo
                 // 선택된 모든 이미지에 크기 적용
                 foreach (var pb in selectedImages)
                 {
+                    undoStack.Push(new EditAction(pb, (Bitmap)pb.Image.Clone(), null));
+                    redoStack.Clear();
                     if (pb.Tag is Bitmap originalBitmap)
                     {
                         Bitmap resized = ResizeImageHighQuality(originalBitmap, new Size(width, height));
@@ -1154,6 +1357,8 @@ namespace photo
                         pb.Image = resized;
                         pb.Size = new Size(width, height);
                         pb.Invalidate();
+                        if (undoStack.Count > 0)
+                            undoStack.Peek().After = (Bitmap)pb.Image.Clone();
                     }
                 }
 
