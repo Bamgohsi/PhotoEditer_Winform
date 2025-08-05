@@ -210,9 +210,9 @@ namespace photo
         }
 
         private void pictureBox_MouseDown(object sender, MouseEventArgs e)
-{
-    if (sender is PictureBox pb && pb.Image != null && e.Button == MouseButtons.Left)
-    {
+        {
+            if (sender is PictureBox pb && pb.Image != null && e.Button == MouseButtons.Left)
+            {
                 // (다중 선택 로직은 이전과 동일)
                 bool isCtrlPressed = (Control.ModifierKeys & Keys.Control) == Keys.Control;
                 if (isCtrlPressed)
@@ -273,8 +273,8 @@ namespace photo
                     }
                     // ▲▲▲ 여기까지 추가 ▲▲▲
                 }
-    }
-}
+            }
+        }
 
         private void pictureBox_MouseMove(object sender, MouseEventArgs e)
         {
@@ -392,7 +392,7 @@ namespace photo
                     e.Graphics.DrawRectangle(pen, rect);
                 }
             }
-        }   
+        }
 
         private void EnableDoubleBuffering(Control control)
         {
@@ -1179,6 +1179,30 @@ namespace photo
             int corrected = Math.Max(16, Math.Min(4000, val));
             if (textBox2.Text != corrected.ToString()) textBox2.Text = corrected.ToString();
             UpdateSelectedImageSize();
+        }
+
+        private void btnRotate180_Click(object sender, EventArgs e)  
+        {
+            foreach (var pb in selectedImages)  
+            {
+                if (pb != null && pb.Image != null)
+                {
+                    pb.Image.RotateFlip(RotateFlipType.Rotate180FlipNone);
+                    pb.Invalidate();
+                }
+            }
+        }
+
+        private void btnFlipHorizontal_Click(object sender, EventArgs e)
+        {
+            foreach (var pb in selectedImages)
+            {
+                if (pb != null && pb.Image != null)
+                {
+                    pb.Image.RotateFlip(RotateFlipType.RotateNoneFlipX);
+                    pb.Invalidate();
+                }
+            }
         }
     }
 }

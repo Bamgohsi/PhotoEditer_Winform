@@ -37,6 +37,12 @@
             toolStripp_Save = new ToolStripMenuItem();
             toolStripMenuItem3 = new ToolStripMenuItem();
             groupBox2 = new GroupBox();
+            btnFlipHorizontal = new Button();
+            btnRotate180 = new Button();
+            textBox2 = new TextBox();
+            textBox1 = new TextBox();
+            label2 = new Label();
+            label1 = new Label();
             button2 = new Button();
             button1 = new Button();
             button12 = new Button();
@@ -46,10 +52,6 @@
             btn_Save = new Button();
             btn_NewFile = new Button();
             btn_Open = new Button();
-            label1 = new Label();
-            label2 = new Label();
-            textBox1 = new TextBox();
-            textBox2 = new TextBox();
             tabControl1.SuspendLayout();
             menuStrip1.SuspendLayout();
             groupBox2.SuspendLayout();
@@ -121,6 +123,8 @@
             // groupBox2
             // 
             groupBox2.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            groupBox2.Controls.Add(btnFlipHorizontal);
+            groupBox2.Controls.Add(btnRotate180);
             groupBox2.Controls.Add(textBox2);
             groupBox2.Controls.Add(textBox1);
             groupBox2.Controls.Add(label2);
@@ -139,6 +143,58 @@
             groupBox2.Size = new Size(1505, 41);
             groupBox2.TabIndex = 3;
             groupBox2.TabStop = false;
+            // 
+            // btnFlipHorizontal
+            // 
+            btnFlipHorizontal.Location = new Point(447, 12);
+            btnFlipHorizontal.Name = "btnFlipHorizontal";
+            btnFlipHorizontal.Size = new Size(48, 23);
+            btnFlipHorizontal.TabIndex = 7;
+            btnFlipHorizontal.Text = "반전";
+            btnFlipHorizontal.UseVisualStyleBackColor = true;
+            btnFlipHorizontal.Click += btnFlipHorizontal_Click;
+            // 
+            // btnRotate180
+            // 
+            btnRotate180.Location = new Point(382, 12);
+            btnRotate180.Name = "btnRotate180";
+            btnRotate180.Size = new Size(48, 23);
+            btnRotate180.TabIndex = 7;
+            btnRotate180.Text = "180회";
+            btnRotate180.UseVisualStyleBackColor = true;
+            btnRotate180.Click += btnRotate180_Click;
+            // 
+            // textBox2
+            // 
+            textBox2.Location = new Point(678, 13);
+            textBox2.Name = "textBox2";
+            textBox2.Size = new Size(56, 23);
+            textBox2.TabIndex = 6;
+            // 
+            // textBox1
+            // 
+            textBox1.Location = new Point(579, 13);
+            textBox1.Name = "textBox1";
+            textBox1.Size = new Size(56, 23);
+            textBox1.TabIndex = 6;
+            // 
+            // label2
+            // 
+            label2.AutoSize = true;
+            label2.Location = new Point(651, 16);
+            label2.Name = "label2";
+            label2.Size = new Size(21, 15);
+            label2.TabIndex = 5;
+            label2.Text = "Y :";
+            // 
+            // label1
+            // 
+            label1.AutoSize = true;
+            label1.Location = new Point(552, 16);
+            label1.Name = "label1";
+            label1.Size = new Size(21, 15);
+            label1.TabIndex = 5;
+            label1.Text = "X :";
             // 
             // button2
             // 
@@ -230,38 +286,6 @@
             btn_Open.UseVisualStyleBackColor = true;
             btn_Open.Click += btn_Open_Click;
             // 
-            // label1
-            // 
-            label1.AutoSize = true;
-            label1.Location = new Point(407, 16);
-            label1.Name = "label1";
-            label1.Size = new Size(21, 15);
-            label1.TabIndex = 5;
-            label1.Text = "X :";
-            // 
-            // label2
-            // 
-            label2.AutoSize = true;
-            label2.Location = new Point(506, 16);
-            label2.Name = "label2";
-            label2.Size = new Size(21, 15);
-            label2.TabIndex = 5;
-            label2.Text = "Y :";
-            // 
-            // textBox1
-            // 
-            textBox1.Location = new Point(434, 13);
-            textBox1.Name = "textBox1";
-            textBox1.Size = new Size(56, 23);
-            textBox1.TabIndex = 6;
-            // 
-            // textBox2
-            // 
-            textBox2.Location = new Point(533, 13);
-            textBox2.Name = "textBox2";
-            textBox2.Size = new Size(56, 23);
-            textBox2.TabIndex = 6;
-            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -307,5 +331,7 @@
         private TextBox textBox1;
         private Label label2;
         private Label label1;
+        private Button btnFlipHorizontal;
+        private Button btnRotate180;
     }
 }
