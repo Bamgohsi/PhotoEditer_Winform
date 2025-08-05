@@ -1,7 +1,7 @@
 using System.Drawing.Drawing2D;
 using System.Reflection;
 using System.Windows.Forms;
-
+using System.Runtime.InteropServices;  //배경화면을 설정하기 위해 using 추가
 namespace photo
 {
     public partial class Form1 : Form
@@ -15,6 +15,7 @@ namespace photo
         private const int BottomMargin = 20; // 폼 하단 여백
         // 이미지 원본을 저장할 리스트
         private List<(PictureBox pb, Bitmap original)> imageList = new List<(PictureBox, Bitmap)>();
+
 
         // 현재 스케일 비율 (기본 1.0f)
         private float currentScale = 1.0f;
@@ -61,6 +62,14 @@ namespace photo
         private bool resizing = false;
         private const int handleSize = 10;
 
+        // Win32 API 선언 (배경화면 설정을 위해)
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);
+
+        private const int SPI_SETDESKWALLPAPER = 20;
+        private const int SPIF_UPDATEINIFILE = 0x01;
+        private const int SPIF_SENDWININICHANGE = 0x02;
+
 
         public Form1()
         {
@@ -74,7 +83,7 @@ namespace photo
             textBox1.KeyPress += TextBox_OnlyNumber_KeyPress;
             textBox2.KeyPress += TextBox_OnlyNumber_KeyPress;
 
-
+            
         }
         private void TextBox_OnlyNumber_KeyPress(object sender, KeyPressEventArgs e)
         {
@@ -164,6 +173,7 @@ namespace photo
             if (openFileDialog.ShowDialog() == DialogResult.OK)
             {
                 string filePath = openFileDialog.FileName;
+
 
                 try
                 {
@@ -986,5 +996,70 @@ namespace photo
             }
         }
 
+        private void button3_Click_1(object sender, EventArgs e)   //원본 크기로 만드는 버튼
+        {
+            TabPage currentTab = tabControl1.SelectedTab;
+            if (currentTab == null) return;
+
+            foreach (Control ctrl in currentTab.Controls)
+            {
+                if (ctrl is PictureBox pb && pb.Tag is Bitmap originalBitmap)
+                {
+                    // 원본 이미지로 복원
+                    Bitmap restored = new Bitmap(originalBitmap); // 복사본 사용
+                    pb.Image = restored;
+                    pb.Size = restored.Size;
+                }
+            }
+
+            // 배율도 초기화
+            currentScale = 1.0f;
+        }
+
+        private void button4_Click_1(object sender, EventArgs e)   //배경화면 설정 버튼
+        {
+            TabPage currentTab = tabControl1.SelectedTab;
+
+            if (currentTab == null)
+            {
+                MessageBox.Show("탭이 선택되지 않았습니다.");
+                return;
+            }
+
+            // 첫 번째 이미지 있는 PictureBox 찾기
+            PictureBox pb = currentTab.Controls
+                .OfType<PictureBox>()
+                .FirstOrDefault(p => p.Image != null);
+
+            if (pb == null)
+            {
+                MessageBox.Show("이미지가 없습니다.");
+                return;
+            }
+
+            try
+            {
+                // 임시 경로에 이미지 저장
+                string tempPath = Path.Combine(Path.GetTempPath(), "wallpaper.jpg");
+                pb.Image.Save(tempPath, System.Drawing.Imaging.ImageFormat.Jpeg);
+
+                // 배경화면 설정
+                bool result = SystemParametersInfo(SPI_SETDESKWALLPAPER, 0, tempPath,
+                    SPIF_UPDATEINIFILE | SPIF_SENDWININICHANGE);
+
+                if (!result)
+                {
+                    MessageBox.Show("배경화면 설정 실패");
+                }
+                else
+                {
+                    MessageBox.Show("배경화면이 설정되었습니다.");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("오류: " + ex.Message);
+            }
+        }
     }
 }
