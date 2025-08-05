@@ -450,6 +450,13 @@ namespace photo
             {
                 tab.MouseDown += TabPage_MouseDown;
             }
+            ToolTip toolTip = new ToolTip();
+            toolTip.SetToolTip(btn_NewFile, "새로만들기(Ctrl+N)");
+            toolTip.SetToolTip(btn_Open, "파일 열기(Ctrl+O)");
+            toolTip.SetToolTip(btn_Open, "파일 열기(Ctrl+O)");
+            toolTip.SetToolTip(btn_Open, "파일 열기(Ctrl+O)");
+            toolTip.SetToolTip(btn_Open, "파일 열기(Ctrl+O)");
+            toolTip.SetToolTip(btn_Open, "파일 열기(Ctrl+O)");
         }
 
         int tabNumber;
