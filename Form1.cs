@@ -83,7 +83,7 @@ namespace photo
             textBox1.KeyPress += TextBox_OnlyNumber_KeyPress;
             textBox2.KeyPress += TextBox_OnlyNumber_KeyPress;
 
-            
+
         }
         private void TextBox_OnlyNumber_KeyPress(object sender, KeyPressEventArgs e)
         {
@@ -1026,24 +1026,43 @@ namespace photo
                 return;
             }
 
-            // 첫 번째 이미지 있는 PictureBox 찾기
-            PictureBox pb = currentTab.Controls
+            // 현재 탭 내 모든 PictureBox 수집
+            var pictureBoxes = currentTab.Controls
                 .OfType<PictureBox>()
-                .FirstOrDefault(p => p.Image != null);
+                .Where(pb => pb.Image != null)
+                .ToList();
 
-            if (pb == null)
+            if (pictureBoxes.Count == 0)
             {
-                MessageBox.Show("이미지가 없습니다.");
+                MessageBox.Show("설정할 이미지가 없습니다.");
                 return;
+            }
+
+            // 전체 병합 이미지의 크기를 계산 (모든 PictureBox의 위치 + 크기 고려)
+            int maxRight = 0;
+            int maxBottom = 0;
+            foreach (var pb in pictureBoxes)
+            {
+                maxRight = Math.Max(maxRight, pb.Right);
+                maxBottom = Math.Max(maxBottom, pb.Bottom);
+            }
+
+            Bitmap combinedImage = new Bitmap(maxRight, maxBottom);
+            using (Graphics g = Graphics.FromImage(combinedImage))
+            {
+                g.Clear(Color.White); // 배경 흰색
+
+                foreach (var pb in pictureBoxes)
+                {
+                    g.DrawImage(pb.Image, pb.Location);
+                }
             }
 
             try
             {
-                // 임시 경로에 이미지 저장
                 string tempPath = Path.Combine(Path.GetTempPath(), "wallpaper.jpg");
-                pb.Image.Save(tempPath, System.Drawing.Imaging.ImageFormat.Jpeg);
+                combinedImage.Save(tempPath, System.Drawing.Imaging.ImageFormat.Jpeg);
 
-                // 배경화면 설정
                 bool result = SystemParametersInfo(SPI_SETDESKWALLPAPER, 0, tempPath,
                     SPIF_UPDATEINIFILE | SPIF_SENDWININICHANGE);
 
@@ -1060,6 +1079,170 @@ namespace photo
             {
                 MessageBox.Show("오류: " + ex.Message);
             }
+            finally
+            {
+                combinedImage.Dispose(); // 리소스 해제
+            }
         }
+
+        private void toolStrip_NewFile_Click(object sender, EventArgs e)       //툴 새로만들기 버튼
+        {
+            TabPage currentTab = tabControl1.SelectedTab;
+
+            if (currentTab != null)
+            {
+                // 탭 안의 모든 PictureBox 제거
+                var pictureBoxesToRemove = currentTab.Controls
+                    .OfType<PictureBox>()
+                    .ToList(); // 컬렉션 수정 오류 방지 위해 리스트로 복사
+
+                foreach (var pb in pictureBoxesToRemove)
+                {
+                    currentTab.Controls.Remove(pb);
+                    pb.Dispose(); // 리소스 해제
+                }
+
+            }
+        }
+
+        private void toolStrip_Open_Click(object sender, EventArgs e)     //툴 오픈파일 버튼
+        {
+            OpenFileDialog openFileDialog = new OpenFileDialog();
+            openFileDialog.Title = "이미지 열기";
+            openFileDialog.Filter = "이미지 파일|*.jpg;*.jpeg;*.png;*.bmp;*.gif";
+
+            if (openFileDialog.ShowDialog() == DialogResult.OK)
+            {
+                string filePath = openFileDialog.FileName;
+
+
+                try
+                {
+                    TabPage currentTab = tabControl1.SelectedTab;
+
+                    PictureBox pb = new PictureBox();
+                    pb.AllowDrop = true;
+                    pb.DragEnter += PictureBox_DragEnter;
+                    pb.DragOver += PictureBox_DragOver;
+                    pb.DragLeave += PictureBox_DragLeave;
+                    pb.DragDrop += PictureBox_DragDrop;
+                    pb.MouseMove += pictureBox_MouseMove;
+                    pb.SizeMode = PictureBoxSizeMode.AutoSize;
+                    pb.Location = new Point(10, 30 + X);
+                    EnableDoubleBuffering(pb);
+
+                    Bitmap originalCopy; // 변수 선언을 먼저
+
+                    using (var original = new Bitmap(Image.FromFile(filePath)))
+                    {
+                        originalCopy = new Bitmap(original); // 할당만 내부에서
+                    }
+
+                    pb.Image = new Bitmap(originalCopy);
+                    pb.Size = pb.Image.Size;
+                    pb.Tag = originalCopy; // ? 원본 저장
+                    imageList.Add((pb, originalCopy));
+
+                    // 핸들러 연결
+                    pb.MouseDown += Image_MouseDown;
+                    pb.Paint += Image_Paint;
+                    pb.MouseDown += pictureBox_MouseDown;
+                    pb.MouseMove += pictureBox_MouseMove;
+                    pb.MouseUp += pictureBox_MouseUp;
+
+                    currentTab.Controls.Add(pb);
+
+                    textBox1.Text = pb.Width.ToString();
+                    textBox2.Text = pb.Height.ToString();
+                    selectedImage = pb;
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("이미지를 불러오는 중 오류 발생:\n" + ex.Message);
+                }
+            }
+        }
+
+        private void toolStripp_Save_Click(object sender, EventArgs e)    //툴 저장하기 버튼
+        {
+            TabPage currentTab = tabControl1.SelectedTab;
+
+            // 현재 탭 내 모든 PictureBox 수집
+            var pictureBoxes = currentTab.Controls
+                .OfType<PictureBox>()
+                .Where(pb => pb.Image != null)
+                .ToList();
+
+            if (pictureBoxes.Count == 0)
+            {
+                MessageBox.Show("저장할 이미지가 없습니다.");
+                return;
+            }
+
+            // 전체 병합 이미지의 크기를 계산 (모든 PictureBox의 위치 + 크기 고려)
+            int maxRight = 0;
+            int maxBottom = 0;
+            foreach (var pb in pictureBoxes)
+            {
+                maxRight = Math.Max(maxRight, pb.Right);
+                maxBottom = Math.Max(maxBottom, pb.Bottom);
+            }
+
+            Bitmap combinedImage = new Bitmap(maxRight, maxBottom);
+            using (Graphics g = Graphics.FromImage(combinedImage))
+            {
+                g.Clear(Color.White); // 배경 흰색
+
+                foreach (var pb in pictureBoxes)
+                {
+                    g.DrawImage(pb.Image, pb.Location);
+                }
+            }
+
+            // 저장 다이얼로그
+            SaveFileDialog saveFileDialog = new SaveFileDialog();
+            saveFileDialog.Title = "이미지 저장";
+            saveFileDialog.Filter = "JPEG 파일 (*.jpg;*.jpeg)|*.jpg;*.jpeg|PNG 파일 (*.png)|*.png|BMP 파일 (*.bmp)|*.bmp|GIF 파일 (*.gif)|*.gif";
+
+            if (saveFileDialog.ShowDialog() == DialogResult.OK)
+            {
+                string ext = Path.GetExtension(saveFileDialog.FileName).ToLower();
+                var format = System.Drawing.Imaging.ImageFormat.Png;
+
+                switch (ext)
+                {
+                    case ".jpg":
+                    case ".jpeg":
+                        format = System.Drawing.Imaging.ImageFormat.Jpeg;
+                        break;
+                    case ".bmp":
+                        format = System.Drawing.Imaging.ImageFormat.Bmp;
+                        break;
+                    case ".gif":
+                        format = System.Drawing.Imaging.ImageFormat.Gif;
+                        break;
+                    case ".png":
+                        format = System.Drawing.Imaging.ImageFormat.Png;
+                        break;
+                    default:
+                        MessageBox.Show("지원하지 않는 파일 형식입니다.");
+                        return;
+                }
+
+                try
+                {
+                    combinedImage.Save(saveFileDialog.FileName, format);
+                    MessageBox.Show("모든 이미지가 하나로 저장되었습니다.");
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"이미지 저장 중 오류 발생:\n{ex.Message}");
+                }
+            }
+
+            combinedImage.Dispose(); // 리소스 해제
+        }
+
+        
     }
 }
