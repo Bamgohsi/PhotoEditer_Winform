@@ -2178,6 +2178,7 @@ namespace photo
             currentCropRect = Rectangle.Empty;
             selectedImage?.Invalidate();
             combinedBitmapForUndo?.Dispose();
+            //
         }
     }
 }
