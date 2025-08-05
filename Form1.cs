@@ -74,7 +74,16 @@ namespace photo
             textBox1.KeyPress += TextBox_OnlyNumber_KeyPress;
             textBox2.KeyPress += TextBox_OnlyNumber_KeyPress;
 
+            // 폼의 배경색 설정
+            this.BackColor = ColorTranslator.FromHtml("#FFF0F5");
 
+            // Form1 생성자에 방향키 이벤트 등록
+            this.KeyPreview = true; // 폼이 키 이벤트를 먼저 받도록 설정
+            this.KeyDown += Form1_KeyDown;
+
+            // textBox_Leave 이벤트 핸들러
+            textBox3.Leave += textBox_Leave;
+            textBox4.Leave += textBox_Leave;
         }
         private void TextBox_OnlyNumber_KeyPress(object sender, KeyPressEventArgs e)
         {
@@ -210,6 +219,8 @@ namespace photo
                     MessageBox.Show("이미지를 불러오는 중 오류 발생:\n" + ex.Message);
                 }
             }
+            // 이미지 가져오기 버튼의 포커스를 제거하기
+            this.ActiveControl = null;
         }
 
         private void PictureBox_DragDrop(object sender, DragEventArgs e)
@@ -521,6 +532,24 @@ namespace photo
 
             if (sender is PictureBox pb)
                 pb.Invalidate();
+
+            // 이미지를 옮겼을 때 옮긴 이미지의 좌표 저장
+            isDragging = false;
+
+            // 드래그가 끝난 PictureBox를 가져옵니다.
+            PictureBox movedPictureBox = sender as PictureBox;
+
+            draggingPictureBox = null;
+            showSelectionBorder = false;
+
+            if (movedPictureBox != null)
+            {
+                movedPictureBox.Invalidate();
+
+                // 이미지를 다시 그리지 않고, 위치만 업데이트합니다.
+                textBox3.Text = movedPictureBox.Location.X.ToString();
+                textBox4.Text = movedPictureBox.Location.Y.ToString();
+            }
         }
         private void EnableDoubleBuffering(Control control)
         {
@@ -532,9 +561,9 @@ namespace photo
         {
             if (showSelectionBorder && sender is PictureBox pb)
             {
-                using (Pen pen = new Pen(Color.DeepSkyBlue, 2))
+                using (Pen pen = new Pen(Color.LightSkyBlue, 2))
                 {
-                    pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Solid;
+                    pen.DashStyle = DashStyle.Dash;
                     Rectangle rect = new Rectangle(0, 0, pb.Width - 1, pb.Height - 1);
                     e.Graphics.DrawRectangle(pen, rect);
                 }
@@ -705,6 +734,10 @@ namespace photo
                 btn.Text = $"{i + 1}";
                 btn.Size = new Size(buttonWidth, buttonHeight);
 
+                //
+                btn.BackColor = ColorTranslator.FromHtml("#FFF5F5");
+                btn.FlatStyle = FlatStyle.Flat;
+
                 int col = i % columns;
                 int row = i / columns;
 
@@ -714,6 +747,8 @@ namespace photo
 
                 btn.Tag = i;
                 btn.Click += Button_Click;
+
+                //MakeRoundedButton(btn, 12);
 
                 this.Controls.Add(btn);
                 dynamicButtons[i] = btn;
@@ -725,7 +760,7 @@ namespace photo
             panel8.AutoScroll = true;
 
             Image[] emojis = {
-        Properties.Resources.Emoji1, Properties.Resources.Emoji2, Properties.Resources.Emoji3, Properties.Resources.Emoji4,
+                Properties.Resources.Emoji1, Properties.Resources.Emoji2, Properties.Resources.Emoji3, Properties.Resources.Emoji4,
                 Properties.Resources.Emoji5, Properties.Resources.Emoji6, Properties.Resources.Emoji7, Properties.Resources.Emoji8,
                 Properties.Resources.Emoji9, Properties.Resources.Emoji10, Properties.Resources.Emoji11, Properties.Resources.Emoji12,
                 Properties.Resources.Emoji13, Properties.Resources.Emoji14, Properties.Resources.Emoji15, Properties.Resources.Emoji16,
@@ -840,13 +875,10 @@ namespace photo
             // 현재 보이는 패널인 경우에만 테두리 그리기
             if (paintedPanel != null && paintedPanel == currentVisiblePanel)
             {
-                // 테두리 색상을 검은색으로 변경
-                using (Pen pen = new Pen(Color.Black, 1))
+                // 테두리 색상을 회색으로 변경
+                using (Pen pen = new Pen(Color.LightGray, 1))
                 {
                     pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Solid;
-                    // 패널 경계에 테두리 그리기
-                    Rectangle rect = new Rectangle(0, 0, paintedPanel.Width - 1, paintedPanel.Height - 1);
-                    e.Graphics.DrawRectangle(pen, rect);
                 }
             }
         }
@@ -869,8 +901,9 @@ namespace photo
         {
             if (sender is PictureBox pb && pb == selectedImage && showSelectionBorderForImage)
             {
-                using (Pen pen = new Pen(Color.DeepSkyBlue, 2))
+                using (Pen pen = new Pen(Color.LightSkyBlue, 2))
                 {
+                    pen.DashStyle = DashStyle.Dash;
                     e.Graphics.DrawRectangle(pen, 1, 1, pb.Width - 2, pb.Height - 2);
                 }
             }
@@ -948,6 +981,46 @@ namespace photo
             }
         }
 
+        private void textBox3_TextChanged(object sender, EventArgs e)
+        {
+            // 텍스트 박스 내용이 변경될 때마다 크기 변경 로직을 호출하지 않도록 수정했습니다.
+            if (int.TryParse(textBox3.Text, out int val))
+            {
+                int corrected = Math.Max(0, Math.Min(1000, val)); // 0~1000 사이로 보정
+
+                if (val != corrected)
+                {
+                    textBox3.TextChanged -= textBox3_TextChanged;
+                    textBox3.Text = corrected.ToString();
+                    textBox3.SelectionStart = textBox3.Text.Length; // 커서를 끝으로 이동
+                    textBox3.TextChanged += textBox3_TextChanged;
+                }
+            }
+        }
+
+        private void textBox4_TextChanged(object sender, EventArgs e)
+        {
+            // 텍스트 박스 내용이 변경될 때마다 크기 변경 로직을 호출하지 않도록 수정했습니다.
+            if (int.TryParse(textBox4.Text, out int val))
+            {
+                int corrected = Math.Max(0, Math.Min(1000, val)); // 0~1000 사이로 보정
+
+                if (val != corrected)
+                {
+                    textBox4.TextChanged -= textBox4_TextChanged;
+                    textBox4.Text = corrected.ToString();
+                    textBox4.SelectionStart = textBox4.Text.Length;
+                    textBox4.TextChanged += textBox4_TextChanged;
+                }
+            }
+        }
+
+        // 텍스트 박스에서 포커스가 벗어났을 때만 이미지 크기를 변경합니다.
+        private void textBox_Leave(object sender, EventArgs e)
+        {
+            UpdateSelectedImageSize();
+        }
+
         private void UpdateSelectedImageSize()
         {
             if (selectedImage == null)
@@ -986,5 +1059,35 @@ namespace photo
             }
         }
 
+        // 방향키를 눌렀을 때 선택된 이미지가 1픽셀씩 움직이도록 기능을 추가
+        private void Form1_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (selectedImage != null)
+            {
+                Point loc = selectedImage.Location;
+
+                switch (e.KeyCode)
+                {
+                    case Keys.Left:
+                        loc.X = Math.Max(0, loc.X - 1);
+                        break;
+                    case Keys.Right:
+                        loc.X = Math.Min(selectedImage.Parent.Width - selectedImage.Width, loc.X + 1);
+                        break;
+                    case Keys.Up:
+                        loc.Y = Math.Max(0, loc.Y - 1);
+                        break;
+                    case Keys.Down:
+                        loc.Y = Math.Min(selectedImage.Parent.Height - selectedImage.Height, loc.Y + 1);
+                        break;
+                }
+
+                selectedImage.Location = loc;
+
+                // 방향키로 이미지를 이동할 때마다 텍스트 박스에 좌표 업데이트
+                textBox3.Text = loc.X.ToString();
+                textBox4.Text = loc.Y.ToString();
+            }
+        }
     }
 }
