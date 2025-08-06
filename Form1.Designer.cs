@@ -1,4 +1,5 @@
-﻿namespace photo
+﻿
+namespace photo
 {
     partial class Form1
     {
@@ -202,6 +203,7 @@
             button10.Size = new Size(30, 30);
             button10.TabIndex = 10;
             button10.UseVisualStyleBackColor = false;
+            button10.Click += button10_Click;
             // 
             // button9
             // 
@@ -555,6 +557,11 @@
             ((System.ComponentModel.ISupportInitialize)pictureBox1).EndInit();
             ResumeLayout(false);
             PerformLayout();
+        }
+
+        private void BtnNewTabPage_Click(object sender, EventArgs e)
+        {
+            throw new NotImplementedException();
         }
 
         #endregion
