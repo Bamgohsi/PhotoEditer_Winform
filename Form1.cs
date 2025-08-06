@@ -111,6 +111,7 @@ namespace photo
         private enum FilterState { None, Grayscale, Sepia } // 현수 - 단색 필터 상태
         private FilterState _currentFilter = FilterState.None; // 현수
         private bool isTextChanging = false; // 현수 - TextBox.TextChanged와 TrackBar.Scroll 무한루프 방지용
+        private bool filterApplied = false; // 필터 적용 여부 추적
 
         public Form1()
         {
@@ -1161,27 +1162,48 @@ namespace photo
             if (clickedButton != null)
             {
                 int index = (int)clickedButton.Tag;
-                if (index >= dynamicPanels.Length) return; // 유효하지 않은 인덱스 방지
+                if (index >= dynamicPanels.Length) return;
 
                 Panel targetPanel = dynamicPanels[index];
-                Panel previousVisiblePanel = currentVisiblePanel;
 
-                if (currentVisiblePanel == targetPanel) // 현재 보이는 패널을 다시 클릭하면 숨김
+                //  패널이 이미 열려있는 상태에서 같은 버튼을 다시 누른 경우 → 닫기
+                if (currentVisiblePanel == targetPanel)
                 {
-                    currentVisiblePanel.Visible = false;
-                    currentVisiblePanel = null;
-                }
-                else // 다른 패널을 클릭하면 현재 패널 숨기고 새 패널 보임
-                {
-                    if (currentVisiblePanel != null)
+                    //  필터 패널(1번)을 닫을 때 '적용하기' 안 눌렀으면 복원
+                    if (index == 1 && selectedImage != null && _initialImage != null && !filterApplied)
                     {
-                        currentVisiblePanel.Visible = false;
+                        selectedImage.Image = new Bitmap(_initialImage);
+                        selectedImage.Invalidate();
                     }
-                    targetPanel.Visible = true;
-                    currentVisiblePanel = targetPanel;
+
+                    if (currentVisiblePanel != null)
+                        currentVisiblePanel.Visible = false;
+
+                    currentVisiblePanel = null;
+                    return;
                 }
-                if (previousVisiblePanel != null) previousVisiblePanel.Invalidate(); // 이전 패널 테두리 업데이트
-                if (currentVisiblePanel != null) currentVisiblePanel.Invalidate(); // 새 패널 테두리 업데이트
+
+                // 다른 패널로 전환하는 경우 → 기존 필터 패널이 열려있었으면 복원
+                if (currentVisiblePanel == dynamicPanels[1] && selectedImage != null && _initialImage != null && !filterApplied)
+                {
+                    selectedImage.Image = new Bitmap(_initialImage);
+                    selectedImage.Invalidate();
+                }
+
+                // 기존 패널 닫기 (null 체크 필수)
+                if (currentVisiblePanel != null)
+                    currentVisiblePanel.Visible = false;
+
+                // 새 패널 열기
+                currentVisiblePanel = targetPanel;
+                currentVisiblePanel.Visible = true;
+
+                // 필터 패널 진입 시 초기 백업 및 적용 여부 초기화
+                if (index == 1 && selectedImage != null)
+                {
+                    filterApplied = false; // ← 적용 여부 초기화
+                    UpdateEditControlsFromSelectedImage(); // ← 현재 상태 백업
+                }
             }
         }
 
@@ -1368,14 +1390,26 @@ namespace photo
         // 왼쪽 90도 회전 버튼 클릭
         private void btn_leftdegreeClick(object sender, EventArgs e)
         {
-            // 선택된 모든 이미지에 적용
             foreach (var pb in selectedImages)
             {
                 if (pb != null && pb.Image != null)
                 {
-                    pb.Image.RotateFlip(RotateFlipType.Rotate270FlipNone); // 시계 반대 방향 90도
-                    pb.Size = pb.Image.Size; // 이미지 크기에 맞춰 PictureBox 크기 조정
-                    pb.Invalidate(); // 이미지 다시 그리기
+                    pb.Image.RotateFlip(RotateFlipType.Rotate270FlipNone);
+                    pb.Size = pb.Image.Size;
+                    pb.Invalidate();
+
+                    //  Tag와 imageList 동기화
+                    if (pb.Tag is Bitmap oldTag) oldTag.Dispose();
+                    pb.Tag = new Bitmap(pb.Image);
+
+                    for (int i = 0; i < imageList.Count; i++)
+                    {
+                        if (imageList[i].pb == pb)
+                        {
+                            imageList[i] = (pb, new Bitmap(pb.Image));
+                            break;
+                        }
+                    }
                 }
             }
         }
@@ -1383,14 +1417,26 @@ namespace photo
         // 오른쪽 90도 회전 버튼 클릭
         private void btn_righthegreeClick(object sender, EventArgs e)
         {
-            // 선택된 모든 이미지에 적용
             foreach (var pb in selectedImages)
             {
                 if (pb != null && pb.Image != null)
                 {
-                    pb.Image.RotateFlip(RotateFlipType.Rotate90FlipNone); // 시계 방향 90도
-                    pb.Size = pb.Image.Size; // 이미지 크기에 맞춰 PictureBox 크기 조정
-                    pb.Invalidate(); // 이미지 다시 그리기
+                    pb.Image.RotateFlip(RotateFlipType.Rotate90FlipNone);
+                    pb.Size = pb.Image.Size;
+                    pb.Invalidate();
+
+                    // ?? Tag와 imageList 동기화
+                    if (pb.Tag is Bitmap oldTag) oldTag.Dispose();
+                    pb.Tag = new Bitmap(pb.Image);
+
+                    for (int i = 0; i < imageList.Count; i++)
+                    {
+                        if (imageList[i].pb == pb)
+                        {
+                            imageList[i] = (pb, new Bitmap(pb.Image));
+                            break;
+                        }
+                    }
                 }
             }
         }
@@ -1616,21 +1662,23 @@ namespace photo
         {
             if (selectedImage != null)
             {
-                // imageList에서 현재 PictureBox에 해당하는 원본 이미지를 찾음
                 var imageInfo = imageList.FirstOrDefault(item => item.pb == selectedImage);
                 if (imageInfo.pb != null)
                 {
-                    _initialImage = (Bitmap)imageInfo.original.Clone(); // 최초 원본 이미지 설정
-                    originalImage = (Bitmap)imageInfo.original.Clone(); // 현재 편집 원본 이미지 설정
-                    btnResetAll_Click(null, null); // 편집 컨트롤 초기화
+                    try
+                    {
+                        // 항상 현재 이미지를 복사해서 _initialImage로 저장
+                        _initialImage = new Bitmap(selectedImage.Image);  // ← 현재 보이는 상태를 백업
+                        originalImage = new Bitmap(selectedImage.Image);  // ← 필터 편집용도 같이 복사
+
+                        btnResetAll_Click(null, null); // ← UI 초기화
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("이미지 복사 실패: " + ex.Message);
+                        return;
+                    }
                 }
-            }
-            else
-            {
-                // 선택된 이미지가 없으면 모든 컨트롤 비활성화 또는 기본값으로 설정
-                btnResetAll_Click(null, null); // 모든 컨트롤 초기화 및 비활성화 효과
-                // 추가적으로 TrackBar와 TextBox를 비활성화할 수도 있습니다.
-                // 예: if (trackRed != null) trackRed.Enabled = false;
             }
         }
 
@@ -2300,16 +2348,25 @@ namespace photo
 
         private void button3_Click(object sender, EventArgs e)
         {
-            // 선택된 모든 이미지에 대해 좌우 반전을 적용합니다.
             foreach (var pb in selectedImages)
             {
                 if (pb != null && pb.Image != null)
                 {
-                    // 이미지에 RotateFlip 메서드를 사용하여 좌우 반전(Horizontal Flip)을 적용합니다.
                     pb.Image.RotateFlip(RotateFlipType.RotateNoneFlipX);
-
-                    // 변경된 이미지를 화면에 다시 그리도록 요청합니다.
                     pb.Invalidate();
+
+                    // Tag와 imageList 동기화
+                    if (pb.Tag is Bitmap oldTag) oldTag.Dispose();
+                    pb.Tag = new Bitmap(pb.Image);
+
+                    for (int i = 0; i < imageList.Count; i++)
+                    {
+                        if (imageList[i].pb == pb)
+                        {
+                            imageList[i] = (pb, new Bitmap(pb.Image));
+                            break;
+                        }
+                    }
                 }
             }
         }
