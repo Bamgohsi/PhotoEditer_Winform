@@ -117,8 +117,8 @@ namespace photo
                 }
             }
 
-            // 왼쪽 공간 확보: LeftMargin + 왼쪽 버튼들 + 중간 여백
-            int totalLeft = LeftMargin + LeftPanelWidth + GapBetweenPictureBoxAndPanel;
+            // 왼쪽 공간 확보 삭제:
+            int totalLeft = LeftMargin;
 
             // 탭컨트롤 위치 및 크기 조정
             tabControl1.Location = new Point(totalLeft, TopMargin);
@@ -456,10 +456,20 @@ namespace photo
             toolTip.SetToolTip(btn_Save, "파일 저장(Ctrl+S)");
             toolTip.SetToolTip(btnNewTabPage, "탭 페이지 추가");
             toolTip.SetToolTip(btnDltTabPage, "탭 페이지 삭제");
-            toolTip.SetToolTip(btn_Open, "파일 열기(Ctrl+O)");
-            toolTip.SetToolTip(btn_Open, "파일 열기(Ctrl+O)");
-            toolTip.SetToolTip(btn_Open, "파일 열기(Ctrl+O)");
-            toolTip.SetToolTip(btn_Open, "파일 열기(Ctrl+O)");
+            toolTip.SetToolTip(btn_zoomin, "확대");
+            toolTip.SetToolTip(btn_zoomout, "축소");
+            toolTip.SetToolTip(button1, "왼쪽으로 90º회전");
+            toolTip.SetToolTip(button2, "오른쪽으로 90º회전");
+            toolTip.SetToolTip(button3, "좌우반전");
+            toolTip.SetToolTip(button4, "펜");
+            toolTip.SetToolTip(button5, "자르기");
+            toolTip.SetToolTip(button6, "스포이드");
+            toolTip.SetToolTip(button7, "이모티콘");
+            toolTip.SetToolTip(button8, "모자이크");
+            toolTip.SetToolTip(button9, "모자이크 해제");
+            toolTip.SetToolTip(button10, "필터");
+            toolTip.SetToolTip(button13, "지우개");
+
         }
 
         int tabNumber;
@@ -728,41 +738,41 @@ namespace photo
             }
 
             // 2. 버튼 생성
-            int buttonWidth = 40;
-            int buttonHeight = 40;
-            int spacing = 10;
-            int startX = 15;
-            int buttonStartY = 95;
-            int columns = 2;
-            int buttonCount = 10;
+            //int buttonWidth = 40;
+            //int buttonHeight = 40;
+            //int spacing = 10;
+            //int startX = 15;
+            //int buttonStartY = 95;
+            //int columns = 2;
+            //int buttonCount = 10;
 
-            dynamicButtons = new Button[buttonCount];
+            //dynamicButtons = new Button[buttonCount];
 
-            for (int i = 0; i < buttonCount; i++)
-            {
-                Button btn = new Button();
-                btn.Text = $"{i + 1}";
-                btn.Size = new Size(buttonWidth, buttonHeight);
+            //for (int i = 0; i < buttonCount; i++)
+            //{
+            //    Button btn = new Button();
+            //    btn.Text = $"{i + 1}";
+            //    btn.Size = new Size(buttonWidth, buttonHeight);
 
-                //
-                btn.BackColor = ColorTranslator.FromHtml("#FFF5F5");
-                btn.FlatStyle = FlatStyle.Flat;
+            //    //
+            //    btn.BackColor = ColorTranslator.FromHtml("#FFF5F5");
+            //    btn.FlatStyle = FlatStyle.Flat;
 
-                int col = i % columns;
-                int row = i / columns;
+            //    int col = i % columns;
+            //    int row = i / columns;
 
-                btn.Location = new Point(
-                    startX + col * (buttonWidth + spacing),
-                    buttonStartY + row * (buttonHeight + spacing));
+            //    btn.Location = new Point(
+            //        startX + col * (buttonWidth + spacing),
+            //        buttonStartY + row * (buttonHeight + spacing));
 
-                btn.Tag = i;
-                btn.Click += Button_Click;
+            //    btn.Tag = i;
+            //    btn.Click += Button_Click;
 
-                //MakeRoundedButton(btn, 12);
+            //    //MakeRoundedButton(btn, 12);
 
-                this.Controls.Add(btn);
-                dynamicButtons[i] = btn;
-            }
+            //    this.Controls.Add(btn);
+            //    dynamicButtons[i] = btn;
+            //}
 
             // 3. 이모지 PictureBox 추가 (패널 8번)
             Panel panel8 = dynamicPanels[7];
@@ -1105,6 +1115,29 @@ namespace photo
 
         }
 
-        
+        private void button7_Click(object sender, EventArgs e)
+        {
+            Panel targetPanel = dynamicPanels[7];
+
+            if (currentVisiblePanel == targetPanel)
+            {
+                // 이미 열려 있으면 닫기 (토글)
+                targetPanel.Visible = false;
+                currentVisiblePanel = null;
+            }
+            else
+            {
+                // 다른 패널이 열려 있으면 닫고, 이모지 패널 열기
+                foreach (Panel panel in dynamicPanels)
+                {
+                    panel.Visible = false;
+                }
+
+                targetPanel.Visible = true;
+                targetPanel.BringToFront();
+                currentVisiblePanel = targetPanel;
+                targetPanel.Invalidate();
+            }
+        }
     }
 }
