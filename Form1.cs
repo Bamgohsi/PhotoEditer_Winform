@@ -16,15 +16,21 @@ namespace photo
 {
     public class EditAction
     {
+        public enum ActionTypeEnum { EmojiEdit, ImageEdit }  // ← 작업 종류 구분
+
+        public ActionTypeEnum ActionType { get; set; }        // ★ 작업 타입 필드
         public PictureBox PictureBox { get; set; }
         public Bitmap Before { get; set; }
         public Bitmap After { get; set; }
         public Rectangle Bounds { get; set; }
-
         public List<EmojiState> EmojisBefore { get; set; }
         public List<EmojiState> EmojisAfter { get; set; }
 
-        public EditAction(PictureBox pb, Bitmap before, Bitmap after, List<EmojiState> emojisBefore = null, List<EmojiState> emojisAfter = null)
+        public EditAction(
+            PictureBox pb, Bitmap before, Bitmap after,
+            List<EmojiState> emojisBefore = null, List<EmojiState> emojisAfter = null,
+            ActionTypeEnum type = ActionTypeEnum.ImageEdit   // ← 기본값
+        )
         {
             PictureBox = pb;
             Before = before;
@@ -32,6 +38,7 @@ namespace photo
             if (pb != null) Bounds = pb.Bounds;
             EmojisBefore = emojisBefore;
             EmojisAfter = emojisAfter;
+            ActionType = type;   // ★ 할당!
         }
 
         public class EmojiState
@@ -41,6 +48,7 @@ namespace photo
             public Size Size { get; set; }
         }
     }
+
     public partial class Form1 : Form
     {
         // Constants for layout
@@ -129,90 +137,114 @@ namespace photo
                 e.Handled = true;
             }
         }
-
         private void Undo()
         {
-            if (undoStack.Count > 0)
+            while (undoStack.Count > 0)
             {
                 var action = undoStack.Pop();
-                if (action.PictureBox != null)
+                if (action.ActionType != EditAction.ActionTypeEnum.EmojiEdit)
+                    continue; // 이모티콘 편집 아니면 무시하고 다음
+
+                var emojisNow = GetCurrentEmojis(action.PictureBox);
+                var currentImg = (Bitmap)action.PictureBox.Image.Clone();
+                redoStack.Push(new EditAction(
+                    action.PictureBox,
+                    currentImg,
+                    currentImg,
+                    emojisNow,
+                    emojisNow,
+                    EditAction.ActionTypeEnum.EmojiEdit
+                ));
+
+                action.PictureBox.Image?.Dispose();
+                action.PictureBox.Image = (Bitmap)action.Before.Clone();
+                action.PictureBox.Bounds = action.Bounds;
+
+                action.PictureBox.Controls.Clear();
+                if (action.EmojisBefore != null)
                 {
-                    // 이모티콘 정보 저장
-                    var emojisNow = GetCurrentEmojis(action.PictureBox);
-                    redoStack.Push(new EditAction(action.PictureBox, (Bitmap)action.PictureBox.Image.Clone(), action.Before, emojisNow, action.EmojisBefore));
-
-                    action.PictureBox.Image?.Dispose();
-                    action.PictureBox.Image = (Bitmap)action.Before.Clone();
-                    action.PictureBox.Bounds = action.Bounds;
-
-                    // 이모티콘 복구!
-                    action.PictureBox.Controls.Clear();
-                    if (action.EmojisBefore != null)
+                    foreach (var emoji in action.EmojisBefore)
                     {
-                        foreach (var emoji in action.EmojisBefore)
+                        var emojiPB = new PictureBox
                         {
-                            var emojiPB = new PictureBox
-                            {
-                                Image = (Image)emoji.Image.Clone(),
-                                Location = emoji.Location,
-                                Size = emoji.Size,
-                                SizeMode = PictureBoxSizeMode.StretchImage,
-                                BackColor = Color.Transparent
-                            };
-                            // 핸들러 연결
-                            emojiPB.MouseDown += Emoji_MouseDown;
-                            emojiPB.MouseMove += Emoji_MouseMove;
-                            emojiPB.MouseUp += Emoji_MouseUp;
-                            emojiPB.Paint += Emoji_Paint;
-                            action.PictureBox.Controls.Add(emojiPB);
-                        }
+                            Image = (Image)emoji.Image.Clone(),
+                            Location = emoji.Location,
+                            Size = emoji.Size,
+                            SizeMode = PictureBoxSizeMode.StretchImage,
+                            BackColor = Color.Transparent
+                        };
+                        emojiPB.MouseDown += Emoji_MouseDown;
+                        emojiPB.MouseMove += Emoji_MouseMove;
+                        emojiPB.MouseUp += Emoji_MouseUp;
+                        emojiPB.Paint += Emoji_Paint;
+                        action.PictureBox.Controls.Add(emojiPB);
                     }
-                    action.PictureBox.Invalidate();
                 }
+                action.PictureBox.Invalidate();
+                break; // 한 번만 실행
             }
         }
+
+
 
 
         private void Redo()
         {
-            if (redoStack.Count > 0)
+            while (redoStack.Count > 0)
             {
                 var action = redoStack.Pop();
-                if (action.PictureBox != null)
+                if (action.ActionType != EditAction.ActionTypeEnum.EmojiEdit)
+                    continue; // 이모티콘 편집 아니면 무시하고 다음
+
+                var emojisNow = GetCurrentEmojis(action.PictureBox);
+
+                var undoAction = new EditAction(
+                    action.PictureBox,
+                    (Bitmap)action.PictureBox.Image.Clone(),
+                    (Bitmap)action.After.Clone(),
+                    emojisNow,
+                    action.EmojisAfter,
+                    EditAction.ActionTypeEnum.EmojiEdit
+                );
+                undoStack.Push(undoAction);
+
+                action.PictureBox.Image?.Dispose();
+                action.PictureBox.Image = (Bitmap)action.After.Clone();
+                action.PictureBox.Bounds = action.Bounds;
+
+                action.PictureBox.Controls.Clear();
+                if (action.EmojisAfter != null)
                 {
-                    // Undo로 되돌릴 때 현재 이모티콘 정보 저장
-                    var emojisNow = GetCurrentEmojis(action.PictureBox);
-                    undoStack.Push(new EditAction(action.PictureBox, (Bitmap)action.PictureBox.Image.Clone(), action.After, emojisNow, action.EmojisAfter));
-
-                    action.PictureBox.Image?.Dispose();
-                    action.PictureBox.Image = (Bitmap)action.After.Clone();
-                    action.PictureBox.Bounds = action.Bounds;
-
-                    // 이모티콘 복구!
-                    action.PictureBox.Controls.Clear();
-                    if (action.EmojisAfter != null)
+                    foreach (var emoji in action.EmojisAfter)
                     {
-                        foreach (var emoji in action.EmojisAfter)
+                        var emojiPB = new PictureBox
                         {
-                            var emojiPB = new PictureBox
-                            {
-                                Image = (Image)emoji.Image.Clone(),
-                                Location = emoji.Location,
-                                Size = emoji.Size,
-                                SizeMode = PictureBoxSizeMode.StretchImage,
-                                BackColor = Color.Transparent
-                            };
-                            emojiPB.MouseDown += Emoji_MouseDown;
-                            emojiPB.MouseMove += Emoji_MouseMove;
-                            emojiPB.MouseUp += Emoji_MouseUp;
-                            emojiPB.Paint += Emoji_Paint;
-                            action.PictureBox.Controls.Add(emojiPB);
-                        }
+                            Image = (Image)emoji.Image.Clone(),
+                            Location = emoji.Location,
+                            Size = emoji.Size,
+                            SizeMode = PictureBoxSizeMode.StretchImage,
+                            BackColor = Color.Transparent
+                        };
+                        emojiPB.MouseDown += Emoji_MouseDown;
+                        emojiPB.MouseMove += Emoji_MouseMove;
+                        emojiPB.MouseUp += Emoji_MouseUp;
+                        emojiPB.Paint += Emoji_Paint;
+                        action.PictureBox.Controls.Add(emojiPB);
                     }
-                    action.PictureBox.Invalidate();
                 }
+                action.PictureBox.Invalidate();
+
+                if (undoStack.Count > 0)
+                {
+                    undoStack.Peek().After = (Bitmap)action.PictureBox.Image.Clone();
+                    undoStack.Peek().EmojisAfter = GetCurrentEmojis(action.PictureBox);
+                }
+                break; // 한 번만 실행
             }
         }
+
+
+
 
 
 
@@ -317,17 +349,9 @@ namespace photo
                     pb.DragLeave += PictureBox_DragLeave;
                     pb.DragDrop += PictureBox_DragDrop;
 
-                    // --- 근본 원인 해결 코드 ---
-                    // 1. SizeMode를 StretchImage로 변경 (수동 크기 조절 허용)
                     pb.SizeMode = PictureBoxSizeMode.StretchImage;
-
-                    // 2. Anchor 속성을 Top, Left로 고정하여 자동 레이아웃 충돌 방지
                     pb.Anchor = AnchorStyles.Top | AnchorStyles.Left;
-
-                    // 3. Dock 속성 해제
                     pb.Dock = DockStyle.None;
-                    // --- 근본 원인 해결 코드 끝 ---
-
                     pb.Location = new Point(10, 30);
                     EnableDoubleBuffering(pb);
 
@@ -353,6 +377,17 @@ namespace photo
                     textBox1.Text = pb.Width.ToString();
                     textBox2.Text = pb.Height.ToString();
                     selectedImage = pb;
+
+                    // ★★★★★ [핵심] 최초 상태 Undo/Redo 스택에 꼭 쌓아주기 ★★★★★
+                    undoStack.Clear();
+                    redoStack.Clear();
+                    undoStack.Push(new EditAction(
+                        pb,
+                        (Bitmap)pb.Image.Clone(),
+                        (Bitmap)pb.Image.Clone(),
+                        GetCurrentEmojis(pb),
+                        GetCurrentEmojis(pb)
+                    ));
                 }
                 catch (Exception ex)
                 {
@@ -360,6 +395,7 @@ namespace photo
                 }
             }
         }
+
 
         private void pictureBox_MouseDown(object sender, MouseEventArgs e)
         {
@@ -504,11 +540,40 @@ namespace photo
         {
             if (sender is PictureBox pb)
             {
+                bool stateChanged = false;
+
+                // 드래그 또는 리사이즈가 끝난 경우만 true!
                 if (isResizing)
                 {
                     textBox1.Text = pb.Width.ToString();
                     textBox2.Text = pb.Height.ToString();
                     UpdateSelectedImageSize();
+                    stateChanged = true;
+                }
+                if (isDragging)
+                {
+                    stateChanged = true;
+                }
+
+                // --- [Undo/Redo 스택에 상태 저장!] ---
+                if (stateChanged)
+                {
+                    // 현재 작업 이전 상태를 Undo 스택에 저장
+                    undoStack.Push(new EditAction(
+                        pb,
+                        (Bitmap)pb.Image.Clone(),     // Before
+                        null,                        // After는 바로 아래에서 저장
+                        GetCurrentEmojis(pb),        // EmojisBefore
+                        null
+                    ));
+                    redoStack.Clear();
+
+                    // 작업 후 상태(After/EmojisAfter) 저장
+                    if (undoStack.Count > 0)
+                    {
+                        undoStack.Peek().After = (Bitmap)pb.Image.Clone();
+                        undoStack.Peek().EmojisAfter = GetCurrentEmojis(pb);
+                    }
                 }
 
                 isDragging = false;
@@ -519,6 +584,7 @@ namespace photo
                 pb.Invalidate();
             }
         }
+
 
         private void pictureBox_Paint(object sender, PaintEventArgs e)
         {
@@ -567,18 +633,9 @@ namespace photo
             // 1. 추가 전 상태 Undo에 저장
             // --------------------------
             var emojisBefore = GetCurrentEmojis(basePictureBox);
-            undoStack.Push(new EditAction(
-                basePictureBox,
-                (Bitmap)basePictureBox.Image.Clone(),
-                null,
-                emojisBefore, // 이모티콘 추가 전 상태 저장!
-                null
-            ));
-            redoStack.Clear();
+            var beforeBitmap = (Bitmap)basePictureBox.Image.Clone();
 
-            // --------------------------
             // 2. 이모티콘 실제 추가
-            // --------------------------
             PictureBox newEmoji = new PictureBox
             {
                 Image = (Image)emojiPreviewImage.Clone(),
@@ -601,15 +658,20 @@ namespace photo
             showEmojiPreview = false;
             basePictureBox.Invalidate();
 
-            // -----------------------------------------------
             // 3. 추가 후 상태를 After/EmojisAfter로 저장!
-            // -----------------------------------------------
-            if (undoStack.Count > 0)
-            {
-                var top = undoStack.Peek();
-                top.After = (Bitmap)basePictureBox.Image.Clone();
-                top.EmojisAfter = GetCurrentEmojis(basePictureBox); // 추가 후 상태 저장
-            }
+            var afterBitmap = (Bitmap)basePictureBox.Image.Clone();
+            var emojisAfter = GetCurrentEmojis(basePictureBox);
+
+            // ★ 반드시 여기서 After/EmojisAfter까지 EditAction에 정확히 할당!
+            undoStack.Push(new EditAction(
+                basePictureBox,
+                beforeBitmap,
+                afterBitmap,
+                emojisBefore,
+                emojisAfter,
+               EditAction.ActionTypeEnum.EmojiEdit // ★ 타입 지정!
+            ));
+            redoStack.Clear();
         }
 
 
@@ -1068,8 +1130,16 @@ namespace photo
             {
                 return;
             }
-            var emojisBefore = GetCurrentEmojis(selectedImage);
-            undoStack.Push(new EditAction(selectedImage, (Bitmap)selectedImage.Image.Clone(), null));
+
+            // ★★ UndoStack에 현재 상태 저장 (이모티콘 작업 타입!)
+            undoStack.Push(new EditAction(
+                selectedImage,
+                (Bitmap)selectedImage.Image.Clone(),
+                null,
+                GetCurrentEmojis(selectedImage),
+                null,
+                EditAction.ActionTypeEnum.EmojiEdit
+            ));
             redoStack.Clear();
 
             // 원본 비트맵을 기반으로 새 비트맵 생성 (여기에 그림)
@@ -1087,16 +1157,11 @@ namespace photo
             selectedImage.Image = newBitmap;
 
             // Tag에 저장된 원본 이미지도 최신화 (매우 중요!)
-            // 이렇게 해야 나중에 또 다른 합성을 해도 이전 내용이 유지됨
             if (selectedImage.Tag is Bitmap oldBitmap)
             {
                 oldBitmap.Dispose();
             }
             selectedImage.Tag = new Bitmap(newBitmap);
-
-            if (undoStack.Count > 0)
-                undoStack.Peek().After = (Bitmap)selectedImage.Image.Clone();
-
 
             // 사용이 끝난 이모티콘 컨트롤들은 모두 제거
             foreach (var control in emojiControls)
@@ -1125,6 +1190,17 @@ namespace photo
 
             if (lastEmoji != null)
             {
+                // ★★ UndoStack에 현재 상태 저장 (이모티콘 작업 타입!)
+                undoStack.Push(new EditAction(
+                    selectedImage,
+                    (Bitmap)selectedImage.Image.Clone(),
+                    null,
+                    GetCurrentEmojis(selectedImage),
+                    null,
+                    EditAction.ActionTypeEnum.EmojiEdit
+                ));
+                redoStack.Clear();
+
                 // 컨트롤 목록에서 제거하고 리소스 해제
                 selectedImage.Controls.Remove(lastEmoji);
                 lastEmoji.Dispose();
@@ -1134,6 +1210,7 @@ namespace photo
                 MessageBox.Show("제거할 이모티콘이 없습니다.");
             }
         }
+
 
         private void Button_Click(object sender, EventArgs e)
         {
@@ -1181,27 +1258,72 @@ namespace photo
         private void Form1_MouseDown(object sender, MouseEventArgs e)
         {
             var clickedControl = this.GetChildAtPoint(e.Location);
+
+            // 1. 배경, 탭, TabControl, TabPage 등 "여백" 클릭 시
             if (clickedControl == null || clickedControl is TabControl || clickedControl is TabPage)
             {
-                // 기존 선택 항목들의 테두리를 지우기 위해 Invalidate 호출
+                // 기존 선택 이미지 테두리 지우기
                 foreach (var item in selectedImages)
                 {
                     item.Invalidate();
                 }
                 selectedImages.Clear();
                 selectedImage = null;
+
+                // ★ 추가: 현재 선택된 탭의 모든 PictureBox 내부 이모티콘(Controls)도 선택 해제
+                TabPage currentTab = tabControl1.SelectedTab;
+                if (currentTab != null)
+                {
+                    foreach (var pb in currentTab.Controls.OfType<PictureBox>())
+                    {
+                        foreach (var emoji in pb.Controls.OfType<PictureBox>())
+                        {
+                            emoji.Tag = null;      // Tag 해제 → 테두리 사라짐
+                            emoji.Invalidate();   // 즉시 새로고침!
+                        }
+                    }
+                }
             }
         }
 
+
         private void TabPage_MouseDown(object sender, MouseEventArgs e)
         {
-            // 왼쪽 버튼 클릭 시에만 드래그 선택 시작
-            if (e.Button == MouseButtons.Left)
+            // 만약 클릭 위치에 PictureBox(이미지)가 없다면 == 여백 클릭
+            TabPage tab = sender as TabPage;
+            if (tab == null) return;
+
+            var clickedControl = tab.GetChildAtPoint(e.Location);
+
+            if (clickedControl == null || !(clickedControl is PictureBox))
             {
-                isMarqueeSelecting = true;
-                marqueeStartPoint = e.Location;
+                // 선택된 이미지 테두리 지우기
+                foreach (var item in selectedImages)
+                    item.Invalidate();
+                selectedImages.Clear();
+                selectedImage = null;
+
+                // ★ TabPage 위의 모든 이미지의 이모티콘 선택 해제
+                foreach (var pb in tab.Controls.OfType<PictureBox>())
+                {
+                    foreach (var emoji in pb.Controls.OfType<PictureBox>())
+                    {
+                        emoji.Tag = null;
+                        emoji.Invalidate();
+                    }
+                }
+            }
+            else
+            {
+                // 기존 드래그 선택 기능 유지 (아래 코드 있는 경우)
+                if (e.Button == MouseButtons.Left)
+                {
+                    isMarqueeSelecting = true;
+                    marqueeStartPoint = e.Location;
+                }
             }
         }
+
 
         private void TabPage_MouseMove(object sender, MouseEventArgs e)
         {
