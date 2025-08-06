@@ -341,6 +341,7 @@
             button3.Size = new Size(35, 35);
             button3.TabIndex = 7;
             button3.UseVisualStyleBackColor = false;
+            button3.Click += button3_Click;
             // 
             // textBox2
             // 
