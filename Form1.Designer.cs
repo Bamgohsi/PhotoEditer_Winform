@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            components = new System.ComponentModel.Container();
             tapPage = new TabPage();
             textBox3 = new TextBox();
             tabControl1 = new TabControl();
@@ -65,9 +66,14 @@
             btn_Save = new Button();
             btn_NewFile = new Button();
             btn_Open = new Button();
+            contextMenuStrip1 = new ContextMenuStrip(components);
+            toolStripMenuItem1 = new ToolStripMenuItem();
+            toolStripMenuItem2 = new ToolStripMenuItem();
+            toolStripMenuItem4 = new ToolStripMenuItem();
             tabControl1.SuspendLayout();
             menuStrip1.SuspendLayout();
             groupBox2.SuspendLayout();
+            contextMenuStrip1.SuspendLayout();
             SuspendLayout();
             // 
             // tapPage
@@ -502,6 +508,31 @@
             btn_Open.UseVisualStyleBackColor = false;
             btn_Open.Click += btn_Open_Click;
             // 
+            // contextMenuStrip1
+            // 
+            contextMenuStrip1.Items.AddRange(new ToolStripItem[] { toolStripMenuItem1, toolStripMenuItem2, toolStripMenuItem4 });
+            contextMenuStrip1.Name = "contextMenuStrip1";
+            contextMenuStrip1.Size = new Size(183, 92);
+            // 
+            // toolStripMenuItem1
+            // 
+            toolStripMenuItem1.Name = "toolStripMenuItem1";
+            toolStripMenuItem1.Size = new Size(182, 22);
+            toolStripMenuItem1.Text = "복사";
+            toolStripMenuItem1.Click += toolStripMenuItem1_Click;
+            // 
+            // toolStripMenuItem2
+            // 
+            toolStripMenuItem2.Name = "toolStripMenuItem2";
+            toolStripMenuItem2.Size = new Size(182, 22);
+            toolStripMenuItem2.Text = "toolStripMenuItem2";
+            // 
+            // toolStripMenuItem4
+            // 
+            toolStripMenuItem4.Name = "toolStripMenuItem4";
+            toolStripMenuItem4.Size = new Size(182, 22);
+            toolStripMenuItem4.Text = "toolStripMenuItem4";
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -519,6 +550,7 @@
             menuStrip1.PerformLayout();
             groupBox2.ResumeLayout(false);
             groupBox2.PerformLayout();
+            contextMenuStrip1.ResumeLayout(false);
             ResumeLayout(false);
             PerformLayout();
         }
@@ -562,5 +594,9 @@
         private Label label4;
         private Label label6;
         private Label label5;
+        private ContextMenuStrip contextMenuStrip1;
+        private ToolStripMenuItem toolStripMenuItem1;
+        private ToolStripMenuItem toolStripMenuItem2;
+        private ToolStripMenuItem toolStripMenuItem4;
     }
 }

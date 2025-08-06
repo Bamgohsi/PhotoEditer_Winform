@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -13,9 +13,15 @@ using System.Windows.Forms;
 
 namespace photo
 {
-
     public partial class Form1 : Form
     {
+        // --- í´ë¦½ë³´ë“œ ì•„ì´í…œ ì €ì¥ì„ ìœ„í•œ ë‚´ë¶€ í´ë˜ìŠ¤ ---
+        private class ClipboardItem
+        {
+            public Bitmap Image { get; set; }
+            public Point RelativeLocation { get; set; }
+        }
+
         // Constants for layout
         private const int LeftMargin = 20;
         private const int TopMargin = 90;
@@ -23,23 +29,22 @@ namespace photo
         private const int PanelRightMargin = 20;
         private const int GapBetweenPictureBoxAndPanel = 20;
         private const int BottomMargin = 20;
-
-        // ÀÌ¹ÌÁö ¿øº»À» ÀúÀåÇÒ ¸®½ºÆ®
+        // ì´ë¯¸ì§€ ì›ë³¸ì„ ì €ì¥í•  ë¦¬ìŠ¤íŠ¸
         private List<(PictureBox pb, Bitmap original)> imageList = new List<(PictureBox, Bitmap)>();
-
-        // ÀÌ¹ÌÁö¸¦ Á¦ÇÑ ÇÒ º¯¼ö Ãß°¡
+        // ì´ë¯¸ì§€ë¥¼ ì œí•œ í•  ë³€ìˆ˜ ì¶”ê°€
         private const float MIN_SCALE = 0.1f;
         private const float MAX_SCALE = 5.0f;
 
-        //»õ·Î¿î ÅÇ ¹øÈ£¸¦ ¼¼¾îÁÖ´Â º¯¼ö
+        //ìƒˆë¡œìš´ íƒ­ ë²ˆí˜¸ë¥¼ ì„¸ì–´ì£¼ëŠ” ë³€ìˆ˜
         private int tabCount = 2;
-
-        // --- »óÅÂ °ü¸® º¯¼öµé ---
+        // --- ìƒíƒœ ê´€ë¦¬ ë³€ìˆ˜ë“¤ ---
         private bool isDragging = false;
         private Point clickOffset;
         private PictureBox draggingPictureBox = null;
-        private Point dragStartMousePosition; // ºÎ¸ğ ÄÁÆ®·Ñ ±âÁØ ¸¶¿ì½º ½ÃÀÛ À§Ä¡
-        private Dictionary<PictureBox, Point> dragStartPositions = new Dictionary<PictureBox, Point>(); // µå·¡±× ½ÃÀÛ ½ÃÁ¡ÀÇ ¸ğµç PictureBox À§Ä¡
+        private Point dragStartMousePosition;
+        // ë¶€ëª¨ ì»¨íŠ¸ë¡¤ ê¸°ì¤€ ë§ˆìš°ìŠ¤ ì‹œì‘ ìœ„ì¹˜
+        private Dictionary<PictureBox, Point> dragStartPositions = new Dictionary<PictureBox, Point>();
+        // ë“œë˜ê·¸ ì‹œì‘ ì‹œì ì˜ ëª¨ë“  PictureBox ìœ„ì¹˜
         private bool isResizing = false;
         private Point resizeStartPoint;
         private Size resizeStartSize;
@@ -49,7 +54,8 @@ namespace photo
         private Button[] dynamicButtons;
         private Panel[] dynamicPanels;
         private Panel currentVisiblePanel = null;
-        private List<PictureBox> selectedImages = new List<PictureBox>(); // ¿©·¯ ÀÌ¹ÌÁö¸¦ ´ãÀ» ¸®½ºÆ®
+        private List<PictureBox> selectedImages = new List<PictureBox>();
+        // ì—¬ëŸ¬ ì´ë¯¸ì§€ë¥¼ ë‹´ì„ ë¦¬ìŠ¤íŠ¸
         private PictureBox selectedImage = null;
         private bool showSelectionBorderForImage = false;
         private Image emojiPreviewImage = null;
@@ -61,17 +67,28 @@ namespace photo
         private Point dragOffset;
         private bool resizing = false;
         private const int handleSize = 10;
-        private bool isMarqueeSelecting = false;      // ÇöÀç µå·¡±× ¼±ÅÃ ÁßÀÎÁö ¿©ºÎ
-        private Point marqueeStartPoint;            // µå·¡±× ½ÃÀÛ ÁöÁ¡
-        private Rectangle marqueeRect;              // È­¸é¿¡ ±×·ÁÁú ¼±ÅÃ »ç°¢Çü
+        private bool isMarqueeSelecting = false;
+        // í˜„ì¬ ë“œë˜ê·¸ ì„ íƒ ì¤‘ì¸ì§€ ì—¬ë¶€
+        private Point marqueeStartPoint;
+        // ë“œë˜ê·¸ ì‹œì‘ ì§€ì 
+        private Rectangle marqueeRect;
+        // í™”ë©´ì— ê·¸ë ¤ì§ˆ ì„ íƒ ì‚¬ê°í˜•
         private Stack<List<EmojiState>> emojiUndoStack = new Stack<List<EmojiState>>();
         private Stack<List<EmojiState>> emojiRedoStack = new Stack<List<EmojiState>>();
+
+        // --- ContextMenuStrip & Clipboard ê´€ë ¨ ë³€ìˆ˜ ---
+        private ContextMenuStrip imageContextMenu;
+        private ToolStripMenuItem menuCopy;
+        private ToolStripMenuItem menuPaste;
+        private ToolStripMenuItem menuDelete;
+        private List<ClipboardItem> clipboardContent = new List<ClipboardItem>(); // ì—¬ëŸ¬ ì´ë¯¸ì§€ë¥¼ ë‹´ì„ í´ë¦½ë³´ë“œ
 
 
         public Form1()
         {
             InitializeComponent();
             InitializeDynamicControls();
+            InitializeContextMenu(); // ì»¨í…ìŠ¤íŠ¸ ë©”ë‰´ ì´ˆê¸°í™”
             this.Resize += Form1_Resize;
             this.WindowState = FormWindowState.Maximized;
             this.MouseDown += Form1_MouseDown;
@@ -81,12 +98,127 @@ namespace photo
             textBox2.Validating += textBox2_Validating;
             textBox1.KeyDown += TextBox_KeyDown_ApplyOnEnter;
             textBox2.KeyDown += TextBox_KeyDown_ApplyOnEnter;
-            this.BackColor = ColorTranslator.FromHtml("#FFF0F5"); // ¶óº¥´õ ºí·¯½¬ »ö»ó
+            this.BackColor = ColorTranslator.FromHtml("#FFF0F5");
             this.KeyPreview = true;
             this.KeyDown += Form1_KeyDown;
-
         }
 
+        // =================================================================
+        // ì»¨í…ìŠ¤íŠ¸ ë©”ë‰´ (ìš°í´ë¦­) ê´€ë ¨ ë¡œì§
+        // =================================================================
+
+        private void InitializeContextMenu()
+        {
+            imageContextMenu = new ContextMenuStrip();
+            menuCopy = new ToolStripMenuItem("ë³µì‚¬");
+            menuPaste = new ToolStripMenuItem("ë¶™ì—¬ë„£ê¸°");
+            menuDelete = new ToolStripMenuItem("ì‚­ì œ");
+
+            imageContextMenu.Items.AddRange(new[] { menuCopy, menuPaste, menuDelete });
+
+            menuCopy.Click += MenuCopy_Click;
+            menuPaste.Click += MenuPaste_Click;
+            menuDelete.Click += MenuDelete_Click;
+        }
+
+        private void MenuCopy_Click(object sender, EventArgs e)
+        {
+            if (selectedImages.Count == 0) return;
+
+            clipboardContent.Clear();
+
+            // ì„ íƒëœ ì´ë¯¸ì§€ ê·¸ë£¹ì˜ ì¢Œìƒë‹¨ ê¸°ì¤€ì ì„ ì°¾ìŠµë‹ˆë‹¤.
+            int minX = selectedImages.Min(pb => pb.Left);
+            int minY = selectedImages.Min(pb => pb.Top);
+            Point originPoint = new Point(minX, minY);
+
+            foreach (PictureBox pb in selectedImages)
+            {
+                clipboardContent.Add(new ClipboardItem
+                {
+                    Image = new Bitmap(pb.Image),
+                    // ê·¸ë£¹ì˜ ê¸°ì¤€ì ìœ¼ë¡œë¶€í„°ì˜ ìƒëŒ€ ìœ„ì¹˜ë¥¼ ì €ì¥í•©ë‹ˆë‹¤.
+                    RelativeLocation = new Point(pb.Left - originPoint.X, pb.Top - originPoint.Y)
+                });
+            }
+        }
+
+        private void MenuPaste_Click(object sender, EventArgs e)
+        {
+            if (clipboardContent.Count == 0) return;
+
+            // ë©”ë‰´ë¥¼ ë„ìš´ ìœ„ì¹˜ ì •ë³´ë¥¼ ê°€ì ¸ì˜µë‹ˆë‹¤.
+            (TabPage targetTab, Point pasteLocation) = GetPasteTarget();
+            if (targetTab == null) return;
+
+            List<PictureBox> newPbs = new List<PictureBox>();
+            foreach (var item in clipboardContent)
+            {
+                PictureBox pb = new PictureBox
+                {
+                    Image = new Bitmap(item.Image),
+                    SizeMode = PictureBoxSizeMode.StretchImage,
+                    Size = item.Image.Size,
+                    // ë¶™ì—¬ë„£ì„ ìœ„ì¹˜ = ê¸°ì¤€ì  + ìƒëŒ€ ìœ„ì¹˜
+                    Location = new Point(pasteLocation.X + item.RelativeLocation.X, pasteLocation.Y + item.RelativeLocation.Y),
+                    Anchor = AnchorStyles.Top | AnchorStyles.Left,
+                    BackColor = Color.Transparent,
+                    Tag = new Bitmap(item.Image)
+                };
+
+                pb.MouseDown += pictureBox_MouseDown;
+                pb.MouseMove += pictureBox_MouseMove;
+                pb.MouseUp += pictureBox_MouseUp;
+                pb.Paint += pictureBox_Paint;
+
+                targetTab.Controls.Add(pb);
+                imageList.Add((pb, (Bitmap)pb.Tag));
+                newPbs.Add(pb);
+            }
+
+            // ìƒˆë¡œ ë¶™ì—¬ë„£ì€ ì´ë¯¸ì§€ë“¤ì„ ì„ íƒ ìƒíƒœë¡œ ë§Œë“­ë‹ˆë‹¤.
+            foreach (var item in selectedImages) item.Invalidate();
+            selectedImages.Clear();
+            selectedImages.AddRange(newPbs);
+            selectedImage = newPbs.LastOrDefault();
+            foreach (var item in selectedImages) item.Invalidate();
+        }
+
+        private void MenuDelete_Click(object sender, EventArgs e)
+        {
+            if (selectedImages.Count == 0) return;
+
+            // ë¦¬ìŠ¤íŠ¸ë¥¼ ë³µì‚¬í•´ì„œ ì‚¬ìš© (ì›ë³¸ì„ ìˆœíšŒí•˜ë©° ì‚­ì œí•˜ë©´ ì—ëŸ¬ ë°œìƒ)
+            var imagesToDelete = selectedImages.ToList();
+            foreach (PictureBox pb in imagesToDelete)
+            {
+                pb.Parent.Controls.Remove(pb);
+                imageList.RemoveAll(item => item.pb == pb);
+                pb.Dispose();
+            }
+            selectedImages.Clear();
+            selectedImage = null;
+        }
+
+        private (TabPage, Point) GetPasteTarget()
+        {
+            if (imageContextMenu.Tag is Tuple<TabPage, Point> tabInfo)
+            {
+                // ë¹ˆ ê³µê°„ì— ë¶™ì—¬ë„£ê¸°
+                return (tabInfo.Item1, tabInfo.Item2);
+            }
+            if (imageContextMenu.Tag is PictureBox pb)
+            {
+                // ì´ë¯¸ì§€ ìœ„ì— ë¶™ì—¬ë„£ê¸° (ì´ë¯¸ì§€ ì¢Œìƒë‹¨ ê¸°ì¤€)
+                return (pb.Parent as TabPage, new Point(pb.Left + 10, pb.Top + 10));
+            }
+            // ê¸°ë³¸ê°’ (í˜„ì¬ íƒ­ì˜ (10,10))
+            return (tabControl1.SelectedTab, new Point(10, 10));
+        }
+
+        // =================================================================
+        // ê¸°ì¡´ ì½”ë“œ (ì¼ë¶€ ìˆ˜ì •ë¨)
+        // =================================================================
         private void TextBox_KeyDown_ApplyOnEnter(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Enter)
@@ -105,7 +237,6 @@ namespace photo
         }
 
         private const int LeftPanelWidth = 80;
-
         private void Form1_Resize(object sender, EventArgs e)
         {
             if (dynamicPanels != null)
@@ -126,13 +257,11 @@ namespace photo
             }
 
             int totalLeft = LeftMargin + LeftPanelWidth + GapBetweenPictureBoxAndPanel;
-
             tabControl1.Location = new Point(totalLeft, TopMargin);
             tabControl1.Size = new Size(
                 this.ClientSize.Width - totalLeft - PanelWidth - PanelRightMargin - 15,
                 this.ClientSize.Height - TopMargin - BottomMargin
             );
-
             groupBox2.Width = this.ClientSize.Width - 24;
         }
 
@@ -148,6 +277,10 @@ namespace photo
                 EmojiRedo();
                 e.Handled = true;
             }
+            else if (e.Control && e.KeyCode == Keys.Delete)
+            {
+                MenuDelete_Click(null, null);
+            }
         }
 
 
@@ -159,7 +292,6 @@ namespace photo
                 var pictureBoxesToRemove = currentTab.Controls
                     .OfType<PictureBox>()
                     .ToList();
-
                 foreach (var pb in pictureBoxesToRemove)
                 {
                     currentTab.Controls.Remove(pb);
@@ -179,11 +311,10 @@ namespace photo
         }
         private void RestoreEmojis(PictureBox parent, List<EmojiState> states)
         {
-            // ±âÁ¸ ÀÌ¸ğÆ¼ÄÜ Á¦°Å
+            // ê¸°ì¡´ ì´ëª¨í‹°ì½˜ ì œê±°
             foreach (Control c in parent.Controls.OfType<PictureBox>().ToList())
                 parent.Controls.Remove(c);
-
-            // ÀúÀåµÈ »óÅÂ´ë·Î º¹¿ø
+            // ì €ì¥ëœ ìƒíƒœëŒ€ë¡œ ë³µì›
             foreach (var emoji in states)
             {
                 var emojiPb = new PictureBox
@@ -195,12 +326,11 @@ namespace photo
                     BackColor = Color.Transparent,
                     Cursor = Cursors.SizeAll
                 };
-                // ±âÁ¸ ÀÌ¸ğÆ¼ÄÜ ÄÁÆ®·Ñ¿¡ ¿¬°áÇÑ ÀÌº¥Æ® ´Ù½Ã ¿¬°á!
+                // ê¸°ì¡´ ì´ëª¨í‹°ì½˜ ì»¨íŠ¸ë¡¤ì— ì—°ê²°í•œ ì´ë²¤íŠ¸ ë‹¤ì‹œ ì—°ê²°!
                 emojiPb.MouseDown += Emoji_MouseDown;
                 emojiPb.MouseMove += Emoji_MouseMove;
                 emojiPb.MouseUp += Emoji_MouseUp;
                 emojiPb.Paint += Emoji_Paint;
-
                 parent.Controls.Add(emojiPb);
             }
             parent.Invalidate();
@@ -231,8 +361,8 @@ namespace photo
         private void btn_Open_Click(object sender, EventArgs e)
         {
             OpenFileDialog openFileDialog = new OpenFileDialog();
-            openFileDialog.Title = "ÀÌ¹ÌÁö ¿­±â";
-            openFileDialog.Filter = "ÀÌ¹ÌÁö ÆÄÀÏ|*.jpg;*.jpeg;*.png;*.bmp;*.gif";
+            openFileDialog.Title = "ì´ë¯¸ì§€ ì—´ê¸°";
+            openFileDialog.Filter = "ì´ë¯¸ì§€ íŒŒì¼|*.jpg;*.jpeg;*.png;*.bmp;*.gif";
 
             if (openFileDialog.ShowDialog() == DialogResult.OK)
             {
@@ -247,17 +377,9 @@ namespace photo
                     pb.DragOver += PictureBox_DragOver;
                     pb.DragLeave += PictureBox_DragLeave;
                     pb.DragDrop += PictureBox_DragDrop;
-
-                    // --- ±Ùº» ¿øÀÎ ÇØ°á ÄÚµå ---
-                    // 1. SizeMode¸¦ StretchImage·Î º¯°æ (¼öµ¿ Å©±â Á¶Àı Çã¿ë)
                     pb.SizeMode = PictureBoxSizeMode.StretchImage;
-
-                    // 2. Anchor ¼Ó¼ºÀ» Top, Left·Î °íÁ¤ÇÏ¿© ÀÚµ¿ ·¹ÀÌ¾Æ¿ô Ãæµ¹ ¹æÁö
                     pb.Anchor = AnchorStyles.Top | AnchorStyles.Left;
-
-                    // 3. Dock ¼Ó¼º ÇØÁ¦
                     pb.Dock = DockStyle.None;
-                    // --- ±Ùº» ¿øÀÎ ÇØ°á ÄÚµå ³¡ ---
 
                     pb.Location = new Point(10, 30);
                     EnableDoubleBuffering(pb);
@@ -269,11 +391,10 @@ namespace photo
                     }
 
                     pb.Image = new Bitmap(originalCopy);
-                    pb.Size = pb.Image.Size; // ÃÊ±â Å©±â´Â ÀÌ¹ÌÁö Å©±â·Î ¼³Á¤
+                    pb.Size = pb.Image.Size;
                     pb.Tag = originalCopy;
                     imageList.Add((pb, originalCopy));
 
-                    // ÀÌº¥Æ® ÇÚµé·¯ ¿¬°á
                     pb.MouseDown += pictureBox_MouseDown;
                     pb.MouseMove += pictureBox_MouseMove;
                     pb.MouseUp += pictureBox_MouseUp;
@@ -287,7 +408,7 @@ namespace photo
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("ÀÌ¹ÌÁö¸¦ ºÒ·¯¿À´Â Áß ¿À·ù ¹ß»ı:\n" + ex.Message);
+                    MessageBox.Show("ì´ë¯¸ì§€ë¥¼ ë¶ˆëŸ¬ì˜¤ëŠ” ì¤‘ ì˜¤ë¥˜ ë°œìƒ:\n" + ex.Message);
                 }
             }
         }
@@ -296,7 +417,6 @@ namespace photo
         {
             if (sender is PictureBox pb && pb.Image != null && e.Button == MouseButtons.Left)
             {
-                // (´ÙÁß ¼±ÅÃ ·ÎÁ÷Àº ÀÌÀü°ú µ¿ÀÏ)
                 bool isCtrlPressed = (Control.ModifierKeys & Keys.Control) == Keys.Control;
                 if (isCtrlPressed)
                 {
@@ -313,7 +433,6 @@ namespace photo
                 }
                 else
                 {
-                    // ¸¸¾à Å¬¸¯ÇÑ pb°¡ ÀÌ¹Ì ¼±ÅÃµÈ Ç×¸ñ Áß ÇÏ³ª°¡ ¾Æ´Ï¶ó¸é, ±âÁ¸ ¼±ÅÃÀ» Å¬¸®¾î
                     if (!selectedImages.Contains(pb))
                     {
                         foreach (var item in selectedImages) { item.Invalidate(); }
@@ -334,7 +453,6 @@ namespace photo
 
                 foreach (var item in selectedImages) { item.Invalidate(); }
 
-                // --- µå·¡±× ½ÃÀÛ ·ÎÁ÷ ¼öÁ¤ ---
                 if (!string.IsNullOrEmpty(resizeDirection))
                 {
                     isResizing = true;
@@ -345,16 +463,13 @@ namespace photo
                     isDragging = true;
                     isResizing = false;
 
-                    // ¡å¡å¡å ±×·ì ÀÌµ¿À» À§ÇÑ ÃÊ±âÈ­ ÄÚµå Ãß°¡ ¡å¡å¡å
-                    dragStartPositions.Clear(); // µñ¼Å³Ê¸® ÃÊ±âÈ­
-                    dragStartMousePosition = pb.Parent.PointToClient(MousePosition); // ºÎ¸ğ ±âÁØ ¸¶¿ì½º À§Ä¡ ÀúÀå
+                    dragStartPositions.Clear();
+                    dragStartMousePosition = pb.Parent.PointToClient(MousePosition);
 
-                    // ¼±ÅÃµÈ ¸ğµç ÀÌ¹ÌÁöÀÇ ÇöÀç À§Ä¡¸¦ µñ¼Å³Ê¸®¿¡ ÀúÀå
                     foreach (var selectedPb in selectedImages)
                     {
                         dragStartPositions.Add(selectedPb, selectedPb.Location);
                     }
-                    // ¡ã¡ã¡ã ¿©±â±îÁö Ãß°¡ ¡ã¡ã¡ã
                 }
             }
         }
@@ -371,7 +486,6 @@ namespace photo
                 int fixedBottom = pb.Bottom;
                 int fixedLeft = pb.Left;
                 int fixedTop = pb.Top;
-
                 if (resizeDirection.Contains("Right"))
                 {
                     pb.Width = Math.Max(20, mousePosInParent.X - fixedLeft);
@@ -393,16 +507,12 @@ namespace photo
                     pb.Height = newHeight;
                 }
             }
-            else if (isDragging) // <<< ÀÌ ºÎºĞÀ» ¼öÁ¤ÇÕ´Ï´Ù.
+            else if (isDragging)
             {
-                // ÇöÀç ¸¶¿ì½º À§Ä¡ (ºÎ¸ğ ÄÁÆ®·Ñ ±âÁØ)
                 Point currentMousePosition = pb.Parent.PointToClient(MousePosition);
-
-                // µå·¡±× ½ÃÀÛ À§Ä¡·ÎºÎÅÍÀÇ º¯È­·®(µ¨Å¸) °è»ê
                 int deltaX = currentMousePosition.X - dragStartMousePosition.X;
                 int deltaY = currentMousePosition.Y - dragStartMousePosition.Y;
 
-                // µñ¼Å³Ê¸®¿¡ ÀúÀåµÈ ¸ğµç ¼±ÅÃ ÀÌ¹ÌÁöµéÀ» ¼øÈ¸ÇÏ¸ç À§Ä¡ ¾÷µ¥ÀÌÆ®
                 foreach (var item in dragStartPositions)
                 {
                     PictureBox targetPb = item.Key;
@@ -435,6 +545,23 @@ namespace photo
         {
             if (sender is PictureBox pb)
             {
+                // --- ìš°í´ë¦­ ì‹œ ë©”ë‰´ í‘œì‹œ ë¡œì§ (ìˆ˜ì •ë¨) ---
+                if (e.Button == MouseButtons.Right)
+                {
+                    // ìš°í´ë¦­ì€ í˜„ì¬ ì„ íƒ ìƒíƒœë¥¼ ë³€ê²½í•˜ì§€ ì•Šê³ ,
+                    // í˜„ì¬ ì„ íƒëœ ì´ë¯¸ì§€ë“¤ì— ëŒ€í•œ ë©”ë‰´ë¥¼ ë°”ë¡œ ë„ì›ë‹ˆë‹¤.
+
+                    // ë©”ë‰´ ì•„ì´í…œ í™œì„±í™”/ë¹„í™œì„±í™”
+                    menuCopy.Enabled = selectedImages.Count > 0;
+                    menuDelete.Enabled = selectedImages.Count > 0;
+                    menuPaste.Enabled = clipboardContent.Count > 0;
+
+                    // ë©”ë‰´ì— ì–´ë–¤ PictureBoxì—ì„œ ì´ë²¤íŠ¸ê°€ ë°œìƒí–ˆëŠ”ì§€ ì•Œë ¤ì¤Œ
+                    imageContextMenu.Tag = pb;
+                    imageContextMenu.Show(pb, e.Location);
+                }
+
+                // --- ì¢Œí´ë¦­ ê´€ë ¨ ë¡œì§ (ê¸°ì¡´ê³¼ ë™ì¼) ---
                 if (isResizing)
                 {
                     textBox1.Text = pb.Width.ToString();
@@ -456,12 +583,10 @@ namespace photo
             PictureBox pb = sender as PictureBox;
             if (pb == null) return;
 
-            // [¼öÁ¤] selectedImages ¸®½ºÆ®¿¡ Æ÷ÇÔµÇ¾î ÀÖÀ¸¸é Å×µÎ¸®¸¦ ±×¸²
             if (selectedImages.Contains(pb))
             {
                 using (Pen pen = new Pen(Color.DeepSkyBlue, 2))
                 {
-                    // ¸¶Áö¸·À¸·Î ¼±ÅÃµÈ(È°¼ºÈ­µÈ) ÀÌ¹ÌÁö´Â ½Ç¼±, ³ª¸ÓÁö´Â Á¡¼±À¸·Î ±¸ºĞ
                     if (pb == selectedImage)
                     {
                         pen.DashStyle = DashStyle.Solid;
@@ -492,20 +617,17 @@ namespace photo
                 basePictureBox?.Invalidate();
                 return;
             }
-            // [¡ÚÃß°¡] Ç×»ó µå·ÓÇÒ ¶§ ±× »çÁøÀÌ selectedImage°¡ µÇµµ·Ï!
             selectedImage = basePictureBox;
 
-            // Undo/Redo ½ºÅÃ °ü¸®
             emojiUndoStack.Push(CaptureCurrentEmojis(basePictureBox));
             emojiRedoStack.Clear();
-
             PictureBox newEmoji = new PictureBox
             {
                 Image = (Image)emojiPreviewImage.Clone(),
                 SizeMode = PictureBoxSizeMode.StretchImage,
                 Size = new Size(emojiPreviewWidth, emojiPreviewHeight),
                 Location = new Point(
-                    emojiPreviewLocation.X - emojiPreviewWidth / 2,
+                   emojiPreviewLocation.X - emojiPreviewWidth / 2,
                     emojiPreviewLocation.Y - emojiPreviewHeight / 2),
                 BackColor = Color.Transparent,
                 Cursor = Cursors.SizeAll,
@@ -521,9 +643,6 @@ namespace photo
             showEmojiPreview = false;
             basePictureBox.Invalidate();
         }
-
-
-
 
         private void Emoji_MouseDown(object sender, MouseEventArgs e)
         {
@@ -600,6 +719,76 @@ namespace photo
                     handleSize, handleSize);
             }
         }
+        private void TabPage_MouseUp(object sender, MouseEventArgs e)
+        {
+            TabPage currentTab = sender as TabPage;
+            if (currentTab == null) return;
+
+            // --- 1. ì¢Œí´ë¦­ ë“œë˜ê·¸(ì‚¬ê°í˜•) ì„ íƒ ì¢…ë£Œ ì²˜ë¦¬ ---
+            if (isMarqueeSelecting)
+            {
+                isMarqueeSelecting = false;
+
+                // ë“œë˜ê·¸ë¡œ ë§Œë“¤ì–´ì§„ ì‚¬ê°í˜•ì´ ì•„ì£¼ ì‘ìœ¼ë©´(ë‹¨ìˆœ í´ë¦­ìœ¼ë¡œ ê°„ì£¼) ì„ íƒ í•´ì œ
+                if (marqueeRect.Width < 5 && marqueeRect.Height < 5)
+                {
+                    bool clickedOnImage = currentTab.Controls.OfType<PictureBox>().Any(pb => pb.Bounds.Contains(e.Location));
+                    if (!clickedOnImage) // ì´ë¯¸ì§€ ìœ„ë¥¼ í´ë¦­í•œ ê²Œ ì•„ë‹ ë•Œë§Œ ì„ íƒ í•´ì œ
+                    {
+                        foreach (var item in selectedImages) { item.Invalidate(); }
+                        selectedImages.Clear();
+                        selectedImage = null;
+                    }
+                }
+                else
+                {
+                    // ë“œë˜ê·¸ ì„ íƒ ì˜ì—­ê³¼ ê²¹ì¹˜ëŠ” ëª¨ë“  PictureBoxë¥¼ ì„ íƒ ëª©ë¡ì— ì¶”ê°€/ì œê±°
+                    foreach (PictureBox pb in currentTab.Controls.OfType<PictureBox>())
+                    {
+                        if (marqueeRect.IntersectsWith(pb.Bounds))
+                        {
+                            if (!selectedImages.Contains(pb))
+                            {
+                                selectedImages.Add(pb);
+                            }
+                        }
+                    }
+
+                    selectedImage = selectedImages.LastOrDefault();
+                    if (selectedImage != null)
+                    {
+                        textBox1.Text = selectedImage.Width.ToString();
+                        textBox2.Text = selectedImage.Height.ToString();
+                    }
+
+                    // ëª¨ë“  PictureBoxë¥¼ ë‹¤ì‹œ ê·¸ë ¤ì„œ í…Œë‘ë¦¬ ìƒíƒœ ì—…ë°ì´íŠ¸
+                    foreach (var pb in currentTab.Controls.OfType<PictureBox>())
+                    {
+                        pb.Invalidate();
+                    }
+                }
+
+                // í™”ë©´ì— ë‚¨ì•„ìˆëŠ” ì„ íƒ ì‚¬ê°í˜•ì„ ì§€ìš°ê¸°
+                marqueeRect = Rectangle.Empty;
+                currentTab.Invalidate();
+            }
+
+            // --- 2. ìš°í´ë¦­ ë¹ˆ ê³µê°„ ë©”ë‰´ ì²˜ë¦¬ ---
+            if (e.Button == MouseButtons.Right)
+            {
+                bool clickedOnImage = currentTab.Controls.OfType<PictureBox>().Any(pb => pb.Bounds.Contains(e.Location));
+                if (!clickedOnImage)
+                {
+                    menuCopy.Enabled = false;
+                    menuDelete.Enabled = false;
+                    menuPaste.Enabled = clipboardContent.Count > 0;
+
+                    // ë©”ë‰´ì— ì–´ë–¤ íƒ­ê³¼ ìœ„ì¹˜ì¸ì§€ ì •ë³´ë¥¼ ì €ì¥
+                    imageContextMenu.Tag = new Tuple<TabPage, Point>(currentTab, e.Location);
+                    imageContextMenu.Show(Cursor.Position);
+                }
+            }
+        }
 
         private void PictureBox_DragEnter(object sender, DragEventArgs e)
         {
@@ -633,7 +822,7 @@ namespace photo
                 .ToList();
             if (pictureBoxes.Count == 0)
             {
-                MessageBox.Show("ÀúÀåÇÒ ÀÌ¹ÌÁö°¡ ¾ø½À´Ï´Ù.");
+                MessageBox.Show("ì €ì¥í•  ì´ë¯¸ì§€ê°€ ì—†ìŠµë‹ˆë‹¤.");
                 return;
             }
 
@@ -649,7 +838,6 @@ namespace photo
             using (Graphics g = Graphics.FromImage(combinedImage))
             {
                 g.Clear(Color.White);
-
                 foreach (var pb in pictureBoxes)
                 {
                     g.DrawImage(pb.Image, pb.Location);
@@ -657,8 +845,8 @@ namespace photo
             }
 
             SaveFileDialog saveFileDialog = new SaveFileDialog();
-            saveFileDialog.Title = "ÀÌ¹ÌÁö ÀúÀå";
-            saveFileDialog.Filter = "JPEG ÆÄÀÏ (*.jpg;*.jpeg)|*.jpg;*.jpeg|PNG ÆÄÀÏ (*.png)|*.png|BMP ÆÄÀÏ (*.bmp)|*.bmp|GIF ÆÄÀÏ (*.gif)|*.gif";
+            saveFileDialog.Title = "ì´ë¯¸ì§€ ì €ì¥";
+            saveFileDialog.Filter = "JPEG íŒŒì¼ (*.jpg;*.jpeg)|*.jpg;*.jpeg|PNG íŒŒì¼ (*.png)|*.png|BMP íŒŒì¼ (*.bmp)|*.bmp|GIF íŒŒì¼ (*.gif)|*.gif";
             if (saveFileDialog.ShowDialog() == DialogResult.OK)
             {
                 string ext = Path.GetExtension(saveFileDialog.FileName).ToLower();
@@ -671,18 +859,18 @@ namespace photo
                     case ".gif": format = System.Drawing.Imaging.ImageFormat.Gif; break;
                     case ".png": format = System.Drawing.Imaging.ImageFormat.Png; break;
                     default:
-                        MessageBox.Show("Áö¿øÇÏÁö ¾Ê´Â ÆÄÀÏ Çü½ÄÀÔ´Ï´Ù.");
+                        MessageBox.Show("ì§€ì›í•˜ì§€ ì•ŠëŠ” íŒŒì¼ í˜•ì‹ì…ë‹ˆë‹¤.");
                         return;
                 }
 
                 try
                 {
                     combinedImage.Save(saveFileDialog.FileName, format);
-                    MessageBox.Show("¸ğµç ÀÌ¹ÌÁö°¡ ÇÏ³ª·Î ÀúÀåµÇ¾ú½À´Ï´Ù.");
+                    MessageBox.Show("ëª¨ë“  ì´ë¯¸ì§€ê°€ í•˜ë‚˜ë¡œ ì €ì¥ë˜ì—ˆìŠµë‹ˆë‹¤.");
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"ÀÌ¹ÌÁö ÀúÀå Áß ¿À·ù ¹ß»ı:\n{ex.Message}");
+                    MessageBox.Show($"ì´ë¯¸ì§€ ì €ì¥ ì¤‘ ì˜¤ë¥˜ ë°œìƒ:\n{ex.Message}");
                 }
             }
             combinedImage.Dispose();
@@ -700,10 +888,9 @@ namespace photo
         }
 
         int tabNumber;
-
         private void btnNewTabPage_Click(object sender, EventArgs e)
         {
-            // Ç×»ó tabCount¸¦ »ç¿ëÇÏ¿© »õ ÅÇ »ı¼º
+            // í•­ìƒ tabCountë¥¼ ì‚¬ìš©í•˜ì—¬ ìƒˆ íƒ­ ìƒì„±
             TabPage newTabPage = new TabPage($"tp {tabCount}");
             newTabPage.Name = $"tp{tabCount}";
             newTabPage.BackColor = Color.White;
@@ -717,14 +904,14 @@ namespace photo
             tabControl1.TabPages.Add(newTabPage);
             tabControl1.SelectedTab = newTabPage;
 
-            tabCount++; // ´ÙÀ½ ÅÇ ¹øÈ£¸¦ À§ÇØ 1 Áõ°¡
+            tabCount++; // ë‹¤ìŒ íƒ­ ë²ˆí˜¸ë¥¼ ìœ„í•´ 1 ì¦ê°€
         }
 
         private void btnDltTabPage_Click(object sender, EventArgs e)
         {
             if (tabControl1.TabPages.Count <= 1)
             {
-                MessageBox.Show("ÇÏ³ªÀÇ ÅÇÀº ³²¾ÆÀÖ¾î¾ß ÇÕ´Ï´Ù.");
+                MessageBox.Show("í•˜ë‚˜ì˜ íƒ­ì€ ë‚¨ì•„ìˆì–´ì•¼ í•©ë‹ˆë‹¤.");
                 return;
             }
 
@@ -732,16 +919,13 @@ namespace photo
             if (selectedTab != null)
             {
                 tabControl1.TabPages.Remove(selectedTab);
-
-                // ¡å¡å¡å ÇÙ½É: ³²¾ÆÀÖ´Â ÅÇµéÀ» Ã³À½ºÎÅÍ ¼ø¼­´ë·Î ¹øÈ£ ÀçÁöÁ¤ ¡å¡å¡å
                 for (int i = 0; i < tabControl1.TabPages.Count; i++)
                 {
                     TabPage tab = tabControl1.TabPages[i];
-                    tab.Text = $"tp {i + 1}"; // º¸ÀÌ´Â ÅØ½ºÆ® º¯°æ
-                    tab.Name = $"tp{i + 1}";   // ³»ºÎ ÀÌ¸§ º¯°æ
+                    tab.Text = $"tp {i + 1}";
+                    tab.Name = $"tp{i + 1}";
                 }
 
-                // ´ÙÀ½¿¡ »ı¼ºµÉ ÅÇ ¹øÈ£¸¦ ÇöÀç ÅÇ °³¼ö + 1·Î ¼³Á¤
                 tabCount = tabControl1.TabPages.Count + 1;
             }
         }
@@ -749,7 +933,6 @@ namespace photo
         private Bitmap ResizeImageHighQuality(Image img, Size size)
         {
             if (size.Width <= 0 || size.Height <= 0) return null;
-
             Bitmap result = new Bitmap(size.Width, size.Height);
             using (Graphics g = Graphics.FromImage(result))
             {
@@ -763,35 +946,28 @@ namespace photo
             return result;
         }
 
-        private void button11_Click(object sender, EventArgs e) // È®´ë
+        private void button11_Click(object sender, EventArgs e) // í™•ëŒ€
         {
-            // ¼±ÅÃµÈ ¸ğµç ÀÌ¹ÌÁö¿¡ ´ëÇØ È®´ë Àû¿ë
             foreach (var pb in selectedImages)
             {
-                // imageList¿¡¼­ ÇöÀç PictureBox¿¡ ÇØ´çÇÏ´Â ¿øº» ÀÌ¹ÌÁö¸¦ Ã£À½
                 var imageEntry = imageList.FirstOrDefault(entry => entry.pb == pb);
                 if (imageEntry.pb != null)
                 {
                     Bitmap original = imageEntry.original;
-
-                    // ÇöÀç Å©±â¸¦ ±âÁØÀ¸·Î 1.2¹è Å« »õ·Î¿î Å©±â °è»ê
                     int newWidth = (int)(pb.Width * 1.2f);
                     int newHeight = (int)(pb.Height * 1.2f);
 
-                    // ÃÖ´ë Å©±â Á¦ÇÑ (¿øº» ÀÌ¹ÌÁöÀÇ MAX_SCALE ¹è¸¦ ³ÑÁö ¾Êµµ·Ï)
                     if (newWidth > original.Width * MAX_SCALE || newHeight > original.Height * MAX_SCALE)
                     {
-                        continue; // ³Ê¹« Ä¿Áö¸é °Ç³Ê¶Ù±â
+                        continue;
                     }
 
-                    // °íÈ­Áú ¸®»çÀÌÂ¡
                     pb.Image?.Dispose();
                     pb.Image = ResizeImageHighQuality(original, new Size(newWidth, newHeight));
-                    pb.Size = pb.Image.Size; // °è»êµÈ Å©±â·Î ¼³Á¤
+                    pb.Size = pb.Image.Size;
                 }
             }
 
-            // UI ÅØ½ºÆ®¹Ú½º¿¡ ¸¶Áö¸·À¸·Î ¼±ÅÃµÈ ÀÌ¹ÌÁöÀÇ Å©±â¸¦ ¾÷µ¥ÀÌÆ®
             if (selectedImage != null)
             {
                 textBox1.Text = selectedImage.Width.ToString();
@@ -799,35 +975,28 @@ namespace photo
             }
         }
 
-        private void button12_Click(object sender, EventArgs e) // Ãà¼Ò
+        private void button12_Click(object sender, EventArgs e) // ì¶•ì†Œ
         {
-            // ¼±ÅÃµÈ ¸ğµç ÀÌ¹ÌÁö¿¡ ´ëÇØ Ãà¼Ò Àû¿ë
             foreach (var pb in selectedImages)
             {
-                // imageList¿¡¼­ ÇöÀç PictureBox¿¡ ÇØ´çÇÏ´Â ¿øº» ÀÌ¹ÌÁö¸¦ Ã£À½
                 var imageEntry = imageList.FirstOrDefault(entry => entry.pb == pb);
                 if (imageEntry.pb != null)
                 {
                     Bitmap original = imageEntry.original;
-
-                    // ÇöÀç Å©±â¸¦ ±âÁØÀ¸·Î 0.8¹è ÀÛÀº »õ·Î¿î Å©±â °è»ê
                     int newWidth = (int)(pb.Width * 0.8f);
                     int newHeight = (int)(pb.Height * 0.8f);
 
-                    // ÃÖ¼Ò Å©±â Á¦ÇÑ (¿øº» ÀÌ¹ÌÁöÀÇ MIN_SCALE ¹èº¸´Ù ÀÛ¾ÆÁöÁö ¾Êµµ·Ï)
                     if (newWidth < original.Width * MIN_SCALE || newHeight < original.Height * MIN_SCALE)
                     {
-                        continue; // ³Ê¹« ÀÛ¾ÆÁö¸é °Ç³Ê¶Ù±â
+                        continue;
                     }
 
-                    // °íÈ­Áú ¸®»çÀÌÂ¡
                     pb.Image?.Dispose();
                     pb.Image = ResizeImageHighQuality(original, new Size(newWidth, newHeight));
-                    pb.Size = pb.Image.Size; // °è»êµÈ Å©±â·Î ¼³Á¤
+                    pb.Size = pb.Image.Size;
                 }
             }
 
-            // UI ÅØ½ºÆ®¹Ú½º¿¡ ¸¶Áö¸·À¸·Î ¼±ÅÃµÈ ÀÌ¹ÌÁöÀÇ Å©±â¸¦ ¾÷µ¥ÀÌÆ®
             if (selectedImage != null)
             {
                 textBox1.Text = selectedImage.Width.ToString();
@@ -851,7 +1020,7 @@ namespace photo
                     Visible = false,
                     BorderStyle = BorderStyle.FixedSingle
                 };
-                panel.Controls.Add(new Label() { Text = $"ÆíÁı ¼Ó¼º {i + 1}", Location = new Point(10, 10) });
+                panel.Controls.Add(new Label() { Text = $"í¸ì§‘ ì†ì„± {i + 1}", Location = new Point(10, 10) });
                 panel.Paint += Panel_Paint;
                 this.Controls.Add(panel);
                 dynamicPanels[i] = panel;
@@ -877,7 +1046,6 @@ namespace photo
                 this.Controls.Add(btn);
                 dynamicButtons[i] = btn;
             }
-            // 8¹ø ÆĞ³Î °¡Á®¿À±â
             Panel panel8 = dynamicPanels[7];
             panel8.AutoScroll = true;
 
@@ -886,7 +1054,8 @@ namespace photo
                 Properties.Resources.Emoji5, Properties.Resources.Emoji6, Properties.Resources.Emoji7, Properties.Resources.Emoji8,
                 Properties.Resources.Emoji9, Properties.Resources.Emoji10, Properties.Resources.Emoji11, Properties.Resources.Emoji12,
                 Properties.Resources.Emoji13, Properties.Resources.Emoji14, Properties.Resources.Emoji15, Properties.Resources.Emoji16,
-                Properties.Resources.Emoji17, Properties.Resources.Emoji18, Properties.Resources.Emoji19, Properties.Resources.Emoji20,
+                Properties.Resources.Emoji17, Properties.Resources.Emoji18,
+                Properties.Resources.Emoji19, Properties.Resources.Emoji20,
                 Properties.Resources.Emoji21, Properties.Resources.Emoji22, Properties.Resources.Emoji23, Properties.Resources.Emoji24,
                 Properties.Resources.Emoji25, Properties.Resources.Emoji26, Properties.Resources.Emoji27, Properties.Resources.Emoji28,
                 Properties.Resources.Emoji29, Properties.Resources.Emoji30, Properties.Resources.Emoji31, Properties.Resources.Emoji32,
@@ -901,12 +1070,10 @@ namespace photo
                 Properties.Resources.Emoji65, Properties.Resources.Emoji66, Properties.Resources.Emoji67, Properties.Resources.Emoji68,
                 Properties.Resources.Emoji69
             };
-
             int iconSize = 48;
             int emojiPadding = 8;
-            int emojiStartY = 50; // ÀÌ¸ğÆ¼ÄÜ ¸ñ·ÏÀÌ ½ÃÀÛµÉ Y À§Ä¡
+            int emojiStartY = 50;
             int iconsPerRow = (panel8.Width - emojiPadding * 2) / (iconSize + emojiPadding);
-
             for (int i = 0; i < emojis.Length; i++)
             {
                 var pic = new PictureBox
@@ -919,7 +1086,6 @@ namespace photo
                         emojiPadding + (i % iconsPerRow) * (iconSize + emojiPadding),
                         emojiStartY + (i / iconsPerRow) * (iconSize + emojiPadding))
                 };
-                // ÀÌ¸ğÆ¼ÄÜ Å¬¸¯ ½Ã µå·¡±× ½ÃÀÛ ÀÌº¥Æ® ¿¬°á
                 pic.MouseDown += (s, e) =>
                 {
                     if (e.Button == MouseButtons.Left)
@@ -931,21 +1097,18 @@ namespace photo
                 panel8.Controls.Add(pic);
             }
 
-            // 'Àû¿ë' ¹öÆ° »ı¼º
             Button btnApplyEmojis = new Button();
-            btnApplyEmojis.Text = "Àû¿ë";
+            btnApplyEmojis.Text = "ì ìš©";
             btnApplyEmojis.Size = new Size(100, 30);
-            // ÆĞ³Î ³ÊºñÀÇ Áß°£Âë¿¡ À§Ä¡ÇÏµµ·Ï µ¿Àû °è»ê
-            btnApplyEmojis.Location = new Point((panel8.Width - btnApplyEmojis.Width * 2 - 10) / 2, 850); // Y À§Ä¡´Â ÀûÀıÈ÷ Á¶Á¤ÇÏ¼¼¿ä.
-            btnApplyEmojis.Click += BtnApplyEmojis_Click; // Å¬¸¯ ÀÌº¥Æ® ÇÚµé·¯ ¿¬°á
+            btnApplyEmojis.Location = new Point((panel8.Width - btnApplyEmojis.Width * 2 - 10) / 2, 850);
+            btnApplyEmojis.Click += BtnApplyEmojis_Click;
             panel8.Controls.Add(btnApplyEmojis);
 
-            // 'Á¦°Å' ¹öÆ° »ı¼º
             Button btnRemoveLastEmoji = new Button();
-            btnRemoveLastEmoji.Text = "³¡ Á¦°Å";
+            btnRemoveLastEmoji.Text = "ë ì œê±°";
             btnRemoveLastEmoji.Size = new Size(100, 30);
             btnRemoveLastEmoji.Location = new Point(btnApplyEmojis.Right + 10, btnApplyEmojis.Top);
-            btnRemoveLastEmoji.Click += BtnRemoveLastEmoji_Click; // Å¬¸¯ ÀÌº¥Æ® ÇÚµé·¯ ¿¬°á
+            btnRemoveLastEmoji.Click += BtnRemoveLastEmoji_Click;
             panel8.Controls.Add(btnRemoveLastEmoji);
 
             if (dynamicPanels.Length > 0)
@@ -955,69 +1118,52 @@ namespace photo
                 currentVisiblePanel.Invalidate();
             }
         }
-        /// <summary>
-        /// 'Àû¿ë' ¹öÆ° Å¬¸¯ ½Ã, ÇöÀç ¹è°æ ÀÌ¹ÌÁö À§ÀÇ ¸ğµç ÀÌ¸ğÆ¼ÄÜÀ» ÇÕ¼ºÇÕ´Ï´Ù.
-        /// </summary>
         private void BtnApplyEmojis_Click(object sender, EventArgs e)
         {
             if (selectedImage == null || selectedImage.Image == null)
             {
-                MessageBox.Show("¸ÕÀú ¹è°æ ÀÌ¹ÌÁö¸¦ ¼±ÅÃÇØÁÖ¼¼¿ä.");
+                MessageBox.Show("ë¨¼ì € ë°°ê²½ ì´ë¯¸ì§€ë¥¼ ì„ íƒí•´ì£¼ì„¸ìš”.");
                 return;
             }
 
-            // ÀÚ½Ä ÄÁÆ®·Ñ Áß PictureBox(ÀÌ¸ğÆ¼ÄÜ)¸¸ °¡Á®¿À±â
             var emojiControls = selectedImage.Controls.OfType<PictureBox>().ToList();
             if (emojiControls.Count == 0)
             {
-                MessageBox.Show("Àû¿ëÇÒ ÀÌ¸ğÆ¼ÄÜÀÌ ¾ø½À´Ï´Ù.");
+                MessageBox.Show("ì ìš©í•  ì´ëª¨í‹°ì½˜ì´ ì—†ìŠµë‹ˆë‹¤.");
                 return;
             }
 
-            // »ç¿ëÀÚ¿¡°Ô µÇµ¹¸± ¼ö ¾øÀ½À» °æ°í
-            var result = MessageBox.Show("ÀÌ¸ğÆ¼ÄÜÀ» ÀÌ¹ÌÁö¿¡ ¿µ±¸ÀûÀ¸·Î ÇÕ¼ºÇÕ´Ï´Ù.\nÀû¿ë ÈÄ¿¡´Â ÀÌµ¿ÇÏ°Å³ª ¼öÁ¤ÇÒ ¼ö ¾ø½À´Ï´Ù.\n°è¼ÓÇÏ½Ã°Ú½À´Ï±î?", "È®ÀÎ", MessageBoxButtons.YesNo);
+            var result = MessageBox.Show("ì´ëª¨í‹°ì½˜ì„ ì´ë¯¸ì§€ì— ì˜êµ¬ì ìœ¼ë¡œ í•©ì„±í•©ë‹ˆë‹¤.\nì ìš© í›„ì—ëŠ” ì´ë™í•˜ê±°ë‚˜ ìˆ˜ì •í•  ìˆ˜ ì—†ìŠµë‹ˆë‹¤.\nê³„ì†í•˜ì‹œê² ìŠµë‹ˆê¹Œ?", "í™•ì¸", MessageBoxButtons.YesNo);
             if (result == DialogResult.No)
             {
                 return;
             }
 
-            // ¿øº» ºñÆ®¸ÊÀ» ±â¹İÀ¸·Î »õ ºñÆ®¸Ê »ı¼º (¿©±â¿¡ ±×¸²)
             Bitmap newBitmap = new Bitmap(selectedImage.Image);
             using (Graphics g = Graphics.FromImage(newBitmap))
             {
-                // ¸ğµç ÀÌ¸ğÆ¼ÄÜ ÄÁÆ®·ÑÀ» ¼øÈ¸ÇÏ¸ç ºñÆ®¸Ê¿¡ ±×¸®±â
                 foreach (PictureBox emoji in emojiControls)
                 {
-                    g.DrawImage(emoji.Image, emoji.Bounds); // Bounds´Â Location°ú Size¸¦ ¸ğµÎ Æ÷ÇÔ
+                    g.DrawImage(emoji.Image, emoji.Bounds);
                 }
             }
 
-            // ÇÕ¼ºµÈ ÀÌ¹ÌÁö·Î ±³Ã¼
             selectedImage.Image = newBitmap;
-
-            // Tag¿¡ ÀúÀåµÈ ¿øº» ÀÌ¹ÌÁöµµ ÃÖ½ÅÈ­ (¸Å¿ì Áß¿ä!)
-            // ÀÌ·¸°Ô ÇØ¾ß ³ªÁß¿¡ ¶Ç ´Ù¸¥ ÇÕ¼ºÀ» ÇØµµ ÀÌÀü ³»¿ëÀÌ À¯ÁöµÊ
             if (selectedImage.Tag is Bitmap oldBitmap)
             {
                 oldBitmap.Dispose();
             }
             selectedImage.Tag = new Bitmap(newBitmap);
-
-
-            // »ç¿ëÀÌ ³¡³­ ÀÌ¸ğÆ¼ÄÜ ÄÁÆ®·ÑµéÀº ¸ğµÎ Á¦°Å
             foreach (var control in emojiControls)
             {
                 selectedImage.Controls.Remove(control);
                 control.Dispose();
             }
-            selectedEmoji = null; // ¼±ÅÃµÈ ÀÌ¸ğÆ¼ÄÜ ÂüÁ¶ ÇØÁ¦
+            selectedEmoji = null;
 
-            MessageBox.Show("Àû¿ëÀÌ ¿Ï·áµÇ¾ú½À´Ï´Ù.");
+            MessageBox.Show("ì ìš©ì´ ì™„ë£Œë˜ì—ˆìŠµë‹ˆë‹¤.");
         }
 
-        /// <summary>
-        /// '¸¶Áö¸· Ç×¸ñ Á¦°Å' ¹öÆ° Å¬¸¯ ½Ã, °¡Àå ¸¶Áö¸·¿¡ Ãß°¡µÈ ÀÌ¸ğÆ¼ÄÜÀ» Á¦°ÅÇÕ´Ï´Ù.
-        /// </summary>
         private void BtnRemoveLastEmoji_Click(object sender, EventArgs e)
         {
             if (selectedImage != null)
@@ -1027,22 +1173,19 @@ namespace photo
             }
             if (selectedImage == null)
             {
-                MessageBox.Show("¸ÕÀú ÀÛ¾÷ÇÒ ÀÌ¹ÌÁö¸¦ ¼±ÅÃÇØÁÖ¼¼¿ä.");
+                MessageBox.Show("ë¨¼ì € ì‘ì—…í•  ì´ë¯¸ì§€ë¥¼ ì„ íƒí•´ì£¼ì„¸ìš”.");
                 return;
             }
 
-            // ÀÚ½Ä ÄÁÆ®·Ñ Áß PictureBox(ÀÌ¸ğÆ¼ÄÜ)¸¦ Ã£À½
             var lastEmoji = selectedImage.Controls.OfType<PictureBox>().LastOrDefault();
-
             if (lastEmoji != null)
             {
-                // ÄÁÆ®·Ñ ¸ñ·Ï¿¡¼­ Á¦°ÅÇÏ°í ¸®¼Ò½º ÇØÁ¦
                 selectedImage.Controls.Remove(lastEmoji);
                 lastEmoji.Dispose();
             }
             else
             {
-                MessageBox.Show("Á¦°ÅÇÒ ÀÌ¸ğÆ¼ÄÜÀÌ ¾ø½À´Ï´Ù.");
+                MessageBox.Show("ì œê±°í•  ì´ëª¨í‹°ì½˜ì´ ì—†ìŠµë‹ˆë‹¤.");
             }
         }
 
@@ -1094,7 +1237,6 @@ namespace photo
             var clickedControl = this.GetChildAtPoint(e.Location);
             if (clickedControl == null || clickedControl is TabControl || clickedControl is TabPage)
             {
-                // ±âÁ¸ ¼±ÅÃ Ç×¸ñµéÀÇ Å×µÎ¸®¸¦ Áö¿ì±â À§ÇØ Invalidate È£Ãâ
                 foreach (var item in selectedImages)
                 {
                     item.Invalidate();
@@ -1109,7 +1251,6 @@ namespace photo
             var tab = sender as TabPage;
             if (tab == null) return;
 
-            // Å¬¸¯ÇÑ À§Ä¡¿¡ "¹è°æ ÀÌ¹ÌÁö(Background Image)"°¡ ÀÖ´ÂÁö °Ë»ç
             PictureBox clickedBackground = null;
             foreach (Control c in tab.Controls)
             {
@@ -1120,14 +1261,13 @@ namespace photo
                 }
             }
 
-            // === [1] "ÀÌ¹ÌÁö ¹Ù±ù" Å¬¸¯: ¸ğµç ÀÌ¸ğÆ¼ÄÜ ¼±ÅÃ ÇØÁ¦ ===
             if (clickedBackground == null)
             {
                 foreach (Control c in tab.Controls)
                 {
-                    if (c is PictureBox bgPb) // ¹è°æ PictureBox
+                    if (c is PictureBox bgPb)
                     {
-                        foreach (Control ec in bgPb.Controls) // ÀÌ¸ğÆ¼ÄÜ PictureBox
+                        foreach (Control ec in bgPb.Controls)
                         {
                             if (ec is PictureBox emojiPb)
                             {
@@ -1139,10 +1279,8 @@ namespace photo
                 }
                 selectedEmoji = null;
             }
-            // === [2] "¹è°æ ÀÌ¹ÌÁö" ³»ºÎÀÇ ºó °÷(ÀÌ¸ğÆ¼ÄÜX) Å¬¸¯: ÀÌ ¹è°æÀÇ ÀÌ¸ğÆ¼ÄÜ¸¸ ¼±ÅÃ ÇØÁ¦ ===
             else
             {
-                // ¹è°æ ÀÌ¹ÌÁö ³»ºÎÀÇ ÀÌ¸ğÆ¼ÄÜ ÄÁÆ®·Ñ Áß, Å¬¸¯ÇÑ À§Ä¡¿¡ °ãÄ¡´Â °Ô ÀÖ´ÂÁö È®ÀÎ
                 bool emojiClicked = false;
                 foreach (Control ec in clickedBackground.Controls)
                 {
@@ -1153,7 +1291,6 @@ namespace photo
                         break;
                     }
                 }
-                // ¸¸¾à ¾î¶² ÀÌ¸ğÆ¼ÄÜµµ Å¬¸¯µÇÁö ¾Ê¾Ò´Ù¸é -> ÇØ´ç ÀÌ¹ÌÁöÀÇ ÀÌ¸ğÆ¼ÄÜ ¼±ÅÃ ÇØÁ¦!
                 if (!emojiClicked)
                 {
                     foreach (Control ec in clickedBackground.Controls)
@@ -1166,10 +1303,8 @@ namespace photo
                     }
                     selectedEmoji = null;
                 }
-                // (ÀÌ¸ğÆ¼ÄÜÀÌ Å¬¸¯µÆÀ¸¸é º°µµ Ã³¸® ¾øÀ½: Emoji_MouseDown¿¡¼­ Ã³¸®)
             }
 
-            // µå·¡±× ¼±ÅÃ »ç°¢ÇüÀº ±âÁ¸ ÄÚµåÃ³·³ ³²°ÜµÎ¸é µÊ!
             if (e.Button == MouseButtons.Left)
             {
                 isMarqueeSelecting = true;
@@ -1181,85 +1316,25 @@ namespace photo
 
         private void TabPage_MouseMove(object sender, MouseEventArgs e)
         {
-            // µå·¡±× ¼±ÅÃ ÁßÀÏ ¶§¸¸ ½ÇÇà
             if (isMarqueeSelecting)
             {
-                // µå·¡±× ½ÃÀÛÁ¡°ú ÇöÀç À§Ä¡¸¦ ±â¹İÀ¸·Î »ç°¢ÇüÀÇ ¿µ¿ªÀ» °è»ê
-                // (¾î´À ¹æÇâÀ¸·Î µå·¡±×ÇÏµç Á¤»óÀûÀ¸·Î »ç°¢ÇüÀÌ ±×·ÁÁöµµ·Ï Math.Min/Abs »ç¿ë)
                 int x = Math.Min(marqueeStartPoint.X, e.X);
                 int y = Math.Min(marqueeStartPoint.Y, e.Y);
                 int width = Math.Abs(marqueeStartPoint.X - e.X);
                 int height = Math.Abs(marqueeStartPoint.Y - e.Y);
                 marqueeRect = new Rectangle(x, y, width, height);
 
-                // TabPage¸¦ ´Ù½Ã ±×¸®µµ·Ï ¿äÃ» (Paint ÀÌº¥Æ® ¹ß»ı)
                 (sender as TabPage).Invalidate();
             }
         }
-        private void TabPage_MouseUp(object sender, MouseEventArgs e)
-        {
-            TabPage currentTab = sender as TabPage;
-            if (currentTab == null) return;
 
-            // µå·¡±× ¼±ÅÃ »óÅÂ Á¾·á
-            isMarqueeSelecting = false;
-
-            // µå·¡±×·Î ¸¸µé¾îÁø »ç°¢ÇüÀÌ ¾ÆÁÖ ÀÛÀ¸¸é(´Ü¼ø Å¬¸¯À¸·Î °£ÁÖ)
-            if (marqueeRect.Width < 5 && marqueeRect.Height < 5)
-            {
-                // ¸ğµç ¼±ÅÃÀ» ÇØÁ¦
-                foreach (var item in selectedImages) { item.Invalidate(); }
-                selectedImages.Clear();
-                selectedImage = null;
-            }
-            else
-            {
-                // µå·¡±× ¼±ÅÃ ¿µ¿ª°ú °ãÄ¡´Â ¸ğµç PictureBox¸¦ Ã£¾Æ¼­ ¼±ÅÃ »óÅÂ¸¦ Åä±Û
-                foreach (PictureBox pb in currentTab.Controls.OfType<PictureBox>())
-                {
-                    if (marqueeRect.IntersectsWith(pb.Bounds))
-                    {
-                        if (selectedImages.Contains(pb))
-                        {
-                            selectedImages.Remove(pb); // ÀÌ¹Ì ¼±ÅÃµÆÀ¸¸é Á¦°Å
-                        }
-                        else
-                        {
-                            selectedImages.Add(pb); // ¼±ÅÃ ¾ÈµÆÀ¸¸é Ãß°¡
-                        }
-                    }
-                }
-
-                // ¸¶Áö¸·À¸·Î ¼±ÅÃµÈ ÀÌ¹ÌÁö¸¦ ´ëÇ¥ ÀÌ¹ÌÁö·Î ¼³Á¤
-                selectedImage = selectedImages.LastOrDefault();
-
-                // ÅØ½ºÆ®¹Ú½º ¾÷µ¥ÀÌÆ®
-                if (selectedImage != null)
-                {
-                    textBox1.Text = selectedImage.Width.ToString();
-                    textBox2.Text = selectedImage.Height.ToString();
-                }
-
-                // ¸ğµç PictureBox¸¦ ´Ù½Ã ±×·Á¼­ Å×µÎ¸® »óÅÂ ¾÷µ¥ÀÌÆ®
-                foreach (var pb in currentTab.Controls.OfType<PictureBox>())
-                {
-                    pb.Invalidate();
-                }
-            }
-
-            // È­¸é¿¡ ³²¾ÆÀÖ´Â ¼±ÅÃ »ç°¢ÇüÀ» Áö¿ì±â À§ÇØ ¸¶Áö¸·À¸·Î Invalidate È£Ãâ
-            marqueeRect = Rectangle.Empty;
-            currentTab.Invalidate();
-        }
-        // TabPage¸¦ ´Ù½Ã ±×·Á¾ß ÇÒ ¶§ (Invalidate È£Ãâ ½Ã)
         private void TabPage_Paint(object sender, PaintEventArgs e)
         {
-            // µå·¡±× ¼±ÅÃ ÁßÀÏ ¶§¸¸ »ç°¢ÇüÀ» ±×¸²
             if (isMarqueeSelecting)
             {
                 using (Pen pen = new Pen(Color.DeepSkyBlue, 1))
                 {
-                    pen.DashStyle = DashStyle.Dash; // Á¡¼± ½ºÅ¸ÀÏ
+                    pen.DashStyle = DashStyle.Dash;
                     e.Graphics.DrawRectangle(pen, marqueeRect);
                 }
             }
@@ -1267,7 +1342,6 @@ namespace photo
 
         private void btn_leftdegreeClick(object sender, EventArgs e)
         {
-            // ¼±ÅÃµÈ ¸ğµç ÀÌ¹ÌÁö¿¡ Àû¿ë
             foreach (var pb in selectedImages)
             {
                 if (pb != null && pb.Image != null)
@@ -1281,7 +1355,6 @@ namespace photo
 
         private void btn_righthegreeClick(object sender, EventArgs e)
         {
-            // ¼±ÅÃµÈ ¸ğµç ÀÌ¹ÌÁö¿¡ Àû¿ë
             foreach (var pb in selectedImages)
             {
                 if (pb != null && pb.Image != null)
@@ -1296,20 +1369,17 @@ namespace photo
         private void UpdateSelectedImageSize()
         {
             if (selectedImages.Count == 0) return;
-
             if (int.TryParse(textBox1.Text, out int width) && int.TryParse(textBox2.Text, out int height))
             {
                 if (width <= 0 || height <= 0) return;
                 width = Math.Max(16, Math.Min(4000, width));
                 height = Math.Max(16, Math.Min(4000, height));
-
-                // ¼±ÅÃµÈ ¸ğµç ÀÌ¹ÌÁö¿¡ Å©±â Àû¿ë
                 foreach (var pb in selectedImages)
                 {
                     if (pb.Tag is Bitmap originalBitmap)
                     {
                         Bitmap resized = ResizeImageHighQuality(originalBitmap, new Size(width, height));
-                        if (resized == null) continue; // ¸®»çÀÌÁî ½ÇÆĞ ½Ã °Ç³Ê¶Ù±â
+                        if (resized == null) continue;
 
                         pb.Image?.Dispose();
                         pb.Image = resized;
@@ -1318,7 +1388,6 @@ namespace photo
                     }
                 }
 
-                // ÅØ½ºÆ®¹Ú½º °ªµµ º¸Á¤µÈ °ªÀ¸·Î ¾÷µ¥ÀÌÆ®
                 if (textBox1.Text != width.ToString()) textBox1.Text = width.ToString();
                 if (textBox2.Text != height.ToString()) textBox2.Text = height.ToString();
             }
@@ -1348,10 +1417,15 @@ namespace photo
             {
                 if (pb != null && pb.Image != null)
                 {
-                    pb.Image.RotateFlip(RotateFlipType.RotateNoneFlipX); // ÁÂ¿ì ¹İÀü
-                    pb.Invalidate(); // º¯°æ»çÇ×À» È­¸é¿¡ ¹İ¿µ
+                    pb.Image.RotateFlip(RotateFlipType.RotateNoneFlipX);
+                    pb.Invalidate();
                 }
             }
+        }
+
+        private void toolStripMenuItem1_Click(object sender, EventArgs e)
+        {
+
         }
     }
     public class EmojiState
