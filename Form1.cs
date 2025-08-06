@@ -13,12 +13,6 @@ using System.Windows.Forms;
 
 namespace photo
 {
-    public class EmojiState
-    {
-        public Image Image { get; set; }
-        public Point Location { get; set; }
-        public Size Size { get; set; }
-    }
 
     public partial class Form1 : Form
     {
@@ -1359,5 +1353,11 @@ namespace photo
                 }
             }
         }
+    }
+    public class EmojiState
+    {
+        public Image Image { get; set; }
+        public Point Location { get; set; }
+        public Size Size { get; set; }
     }
 }
