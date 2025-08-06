@@ -77,6 +77,7 @@ namespace photo
             textBox2.Validating += textBox2_Validating;
             textBox1.KeyDown += TextBox_KeyDown_ApplyOnEnter;
             textBox2.KeyDown += TextBox_KeyDown_ApplyOnEnter;
+            this.BackColor = ColorTranslator.FromHtml("#FFF0F5"); // 라벤더 블러쉬 색상
         }
 
         private void TextBox_KeyDown_ApplyOnEnter(object sender, KeyEventArgs e)
@@ -984,7 +985,7 @@ namespace photo
             Panel paintedPanel = sender as Panel;
             if (paintedPanel != null && paintedPanel == currentVisiblePanel)
             {
-                using (Pen pen = new Pen(Color.Black, 1))
+                using (Pen pen = new Pen(Color.LightGray, 1))
                 {
                     pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Solid;
                     Rectangle rect = new Rectangle(0, 0, paintedPanel.Width - 1, paintedPanel.Height - 1);
