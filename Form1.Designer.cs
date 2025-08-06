@@ -28,7 +28,12 @@
         /// </summary>
         private void InitializeComponent()
         {
+            components = new System.ComponentModel.Container();
             tapPage = new TabPage();
+            contextMenuStrip1 = new ContextMenuStrip(components);
+            toolStripMenuItem1 = new ToolStripMenuItem();
+            toolStripMenuItem2 = new ToolStripMenuItem();
+            toolStripMenuItem4 = new ToolStripMenuItem();
             tabControl1 = new TabControl();
             menuStrip1 = new MenuStrip();
             toolStrip_File = new ToolStripMenuItem();
@@ -37,6 +42,10 @@
             toolStripp_Save = new ToolStripMenuItem();
             toolStripMenuItem3 = new ToolStripMenuItem();
             groupBox2 = new GroupBox();
+            textBox2 = new TextBox();
+            textBox1 = new TextBox();
+            label2 = new Label();
+            label1 = new Label();
             button2 = new Button();
             button1 = new Button();
             button12 = new Button();
@@ -46,10 +55,7 @@
             btn_Save = new Button();
             btn_NewFile = new Button();
             btn_Open = new Button();
-            label1 = new Label();
-            label2 = new Label();
-            textBox1 = new TextBox();
-            textBox2 = new TextBox();
+            contextMenuStrip1.SuspendLayout();
             tabControl1.SuspendLayout();
             menuStrip1.SuspendLayout();
             groupBox2.SuspendLayout();
@@ -58,12 +64,41 @@
             // tapPage
             // 
             tapPage.BackColor = Color.White;
+            tapPage.ContextMenuStrip = contextMenuStrip1;
             tapPage.Location = new Point(4, 24);
             tapPage.Name = "tapPage";
             tapPage.Padding = new Padding(3);
             tapPage.Size = new Size(1371, 798);
             tapPage.TabIndex = 1;
             tapPage.Text = "tp1";
+            // 
+            // contextMenuStrip1
+            // 
+            contextMenuStrip1.Items.AddRange(new ToolStripItem[] { toolStripMenuItem1, toolStripMenuItem2, toolStripMenuItem4 });
+            contextMenuStrip1.Name = "contextMenuStrip1";
+            contextMenuStrip1.Size = new Size(181, 92);
+            //contextMenuStrip1.Opening += contextMenuStrip1_Opening;
+            // 
+            // toolStripMenuItem1
+            // 
+            toolStripMenuItem1.Name = "toolStripMenuItem1";
+            toolStripMenuItem1.Size = new Size(180, 22);
+            toolStripMenuItem1.Text = "복사(Copy)";
+            toolStripMenuItem1.Click += toolStripMenuItem1_Click;
+            // 
+            // toolStripMenuItem2
+            // 
+            toolStripMenuItem2.Name = "toolStripMenuItem2";
+            toolStripMenuItem2.Size = new Size(180, 22);
+            toolStripMenuItem2.Text = "붙여넣기(Paste)";
+            toolStripMenuItem2.Click += toolStripMenuItem2_Click;
+            // 
+            // toolStripMenuItem4
+            // 
+            toolStripMenuItem4.Name = "toolStripMenuItem4";
+            toolStripMenuItem4.Size = new Size(180, 22);
+            toolStripMenuItem4.Text = "삭제(Delete)";
+            toolStripMenuItem4.Click += toolStripMenuItem4_Click;
             // 
             // tabControl1
             // 
@@ -139,6 +174,38 @@
             groupBox2.Size = new Size(1505, 41);
             groupBox2.TabIndex = 3;
             groupBox2.TabStop = false;
+            // 
+            // textBox2
+            // 
+            textBox2.Location = new Point(533, 13);
+            textBox2.Name = "textBox2";
+            textBox2.Size = new Size(56, 23);
+            textBox2.TabIndex = 6;
+            // 
+            // textBox1
+            // 
+            textBox1.Location = new Point(434, 13);
+            textBox1.Name = "textBox1";
+            textBox1.Size = new Size(56, 23);
+            textBox1.TabIndex = 6;
+            // 
+            // label2
+            // 
+            label2.AutoSize = true;
+            label2.Location = new Point(506, 16);
+            label2.Name = "label2";
+            label2.Size = new Size(21, 15);
+            label2.TabIndex = 5;
+            label2.Text = "Y :";
+            // 
+            // label1
+            // 
+            label1.AutoSize = true;
+            label1.Location = new Point(407, 16);
+            label1.Name = "label1";
+            label1.Size = new Size(21, 15);
+            label1.TabIndex = 5;
+            label1.Text = "X :";
             // 
             // button2
             // 
@@ -230,38 +297,6 @@
             btn_Open.UseVisualStyleBackColor = true;
             btn_Open.Click += btn_Open_Click;
             // 
-            // label1
-            // 
-            label1.AutoSize = true;
-            label1.Location = new Point(407, 16);
-            label1.Name = "label1";
-            label1.Size = new Size(21, 15);
-            label1.TabIndex = 5;
-            label1.Text = "X :";
-            // 
-            // label2
-            // 
-            label2.AutoSize = true;
-            label2.Location = new Point(506, 16);
-            label2.Name = "label2";
-            label2.Size = new Size(21, 15);
-            label2.TabIndex = 5;
-            label2.Text = "Y :";
-            // 
-            // textBox1
-            // 
-            textBox1.Location = new Point(434, 13);
-            textBox1.Name = "textBox1";
-            textBox1.Size = new Size(56, 23);
-            textBox1.TabIndex = 6;
-            // 
-            // textBox2
-            // 
-            textBox2.Location = new Point(533, 13);
-            textBox2.Name = "textBox2";
-            textBox2.Size = new Size(56, 23);
-            textBox2.TabIndex = 6;
-            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -274,6 +309,7 @@
             Name = "Form1";
             Text = "Form1";
             Load += Form1_Load;
+            contextMenuStrip1.ResumeLayout(false);
             tabControl1.ResumeLayout(false);
             menuStrip1.ResumeLayout(false);
             menuStrip1.PerformLayout();
@@ -307,5 +343,9 @@
         private TextBox textBox1;
         private Label label2;
         private Label label1;
+        private ContextMenuStrip contextMenuStrip1;
+        private ToolStripMenuItem toolStripMenuItem1;
+        private ToolStripMenuItem toolStripMenuItem2;
+        private ToolStripMenuItem toolStripMenuItem4;
     }
 }

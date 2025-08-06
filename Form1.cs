@@ -37,8 +37,10 @@ namespace photo
         private bool isDragging = false;
         private Point clickOffset;
         private PictureBox draggingPictureBox = null;
-        private Point dragStartMousePosition; // 부모 컨트롤 기준 마우스 시작 위치
-        private Dictionary<PictureBox, Point> dragStartPositions = new Dictionary<PictureBox, Point>(); // 드래그 시작 시점의 모든 PictureBox 위치
+        private Point dragStartMousePosition;
+        // 부모 컨트롤 기준 마우스 시작 위치
+        private Dictionary<PictureBox, Point> dragStartPositions = new Dictionary<PictureBox, Point>();
+        // 드래그 시작 시점의 모든 PictureBox 위치
         private bool isResizing = false;
         private Point resizeStartPoint;
         private Size resizeStartSize;
@@ -48,7 +50,8 @@ namespace photo
         private Button[] dynamicButtons;
         private Panel[] dynamicPanels;
         private Panel currentVisiblePanel = null;
-        private List<PictureBox> selectedImages = new List<PictureBox>(); // 여러 이미지를 담을 리스트
+        private List<PictureBox> selectedImages = new List<PictureBox>();
+        // 여러 이미지를 담을 리스트
         private PictureBox selectedImage = null;
         private bool showSelectionBorderForImage = false;
         private Image emojiPreviewImage = null;
@@ -60,9 +63,14 @@ namespace photo
         private Point dragOffset;
         private bool resizing = false;
         private const int handleSize = 10;
-        private bool isMarqueeSelecting = false;      // 현재 드래그 선택 중인지 여부
-        private Point marqueeStartPoint;            // 드래그 시작 지점
-        private Rectangle marqueeRect;              // 화면에 그려질 선택 사각형
+        private bool isMarqueeSelecting = false;
+        // 현재 드래그 선택 중인지 여부
+        private Point marqueeStartPoint;
+        // 드래그 시작 지점
+        private Rectangle marqueeRect;
+        // 화면에 그려질 선택 사각형
+
+        // ContextMenuStrip 및 메뉴 항목 변수는 Designer.cs에 있으므로 여기서는 제거합니다.
 
         public Form1()
         {
@@ -97,7 +105,6 @@ namespace photo
         }
 
         private const int LeftPanelWidth = 80;
-
         private void Form1_Resize(object sender, EventArgs e)
         {
             if (dynamicPanels != null)
@@ -118,13 +125,11 @@ namespace photo
             }
 
             int totalLeft = LeftMargin + LeftPanelWidth + GapBetweenPictureBoxAndPanel;
-
             tabControl1.Location = new Point(totalLeft, TopMargin);
             tabControl1.Size = new Size(
                 this.ClientSize.Width - totalLeft - PanelWidth - PanelRightMargin - 15,
                 this.ClientSize.Height - TopMargin - BottomMargin
             );
-
             groupBox2.Width = this.ClientSize.Width - 24;
         }
 
@@ -136,7 +141,6 @@ namespace photo
                 var pictureBoxesToRemove = currentTab.Controls
                     .OfType<PictureBox>()
                     .ToList();
-
                 foreach (var pb in pictureBoxesToRemove)
                 {
                     currentTab.Controls.Remove(pb);
@@ -164,14 +168,11 @@ namespace photo
                     pb.DragOver += PictureBox_DragOver;
                     pb.DragLeave += PictureBox_DragLeave;
                     pb.DragDrop += PictureBox_DragDrop;
-
                     // --- 근본 원인 해결 코드 ---
                     // 1. SizeMode를 StretchImage로 변경 (수동 크기 조절 허용)
                     pb.SizeMode = PictureBoxSizeMode.StretchImage;
-
                     // 2. Anchor 속성을 Top, Left로 고정하여 자동 레이아웃 충돌 방지
                     pb.Anchor = AnchorStyles.Top | AnchorStyles.Left;
-
                     // 3. Dock 속성 해제
                     pb.Dock = DockStyle.None;
                     // --- 근본 원인 해결 코드 끝 ---
@@ -196,6 +197,9 @@ namespace photo
                     pb.MouseUp += pictureBox_MouseUp;
                     pb.Paint += pictureBox_Paint;
 
+                    // PictureBox에 ContextMenuStrip 연결
+                    pb.ContextMenuStrip = this.contextMenuStrip1;
+
                     currentTab.Controls.Add(pb);
 
                     textBox1.Text = pb.Width.ToString();
@@ -210,9 +214,9 @@ namespace photo
         }
 
         private void pictureBox_MouseDown(object sender, MouseEventArgs e)
-{
-    if (sender is PictureBox pb && pb.Image != null && e.Button == MouseButtons.Left)
-    {
+        {
+            if (sender is PictureBox pb && pb.Image != null && e.Button == MouseButtons.Left)
+            {
                 // (다중 선택 로직은 이전과 동일)
                 bool isCtrlPressed = (Control.ModifierKeys & Keys.Control) == Keys.Control;
                 if (isCtrlPressed)
@@ -263,8 +267,10 @@ namespace photo
                     isResizing = false;
 
                     // ▼▼▼ 그룹 이동을 위한 초기화 코드 추가 ▼▼▼
-                    dragStartPositions.Clear(); // 딕셔너리 초기화
-                    dragStartMousePosition = pb.Parent.PointToClient(MousePosition); // 부모 기준 마우스 위치 저장
+                    dragStartPositions.Clear();
+                    // 딕셔너리 초기화
+                    dragStartMousePosition = pb.Parent.PointToClient(MousePosition);
+                    // 부모 기준 마우스 위치 저장
 
                     // 선택된 모든 이미지의 현재 위치를 딕셔너리에 저장
                     foreach (var selectedPb in selectedImages)
@@ -273,8 +279,8 @@ namespace photo
                     }
                     // ▲▲▲ 여기까지 추가 ▲▲▲
                 }
-    }
-}
+            }
+        }
 
         private void pictureBox_MouseMove(object sender, MouseEventArgs e)
         {
@@ -288,7 +294,6 @@ namespace photo
                 int fixedBottom = pb.Bottom;
                 int fixedLeft = pb.Left;
                 int fixedTop = pb.Top;
-
                 if (resizeDirection.Contains("Right"))
                 {
                     pb.Width = Math.Max(20, mousePosInParent.X - fixedLeft);
@@ -314,7 +319,6 @@ namespace photo
             {
                 // 현재 마우스 위치 (부모 컨트롤 기준)
                 Point currentMousePosition = pb.Parent.PointToClient(MousePosition);
-
                 // 드래그 시작 위치로부터의 변화량(델타) 계산
                 int deltaX = currentMousePosition.X - dragStartMousePosition.X;
                 int deltaY = currentMousePosition.Y - dragStartMousePosition.Y;
@@ -378,7 +382,8 @@ namespace photo
             {
                 using (Pen pen = new Pen(Color.DeepSkyBlue, 2))
                 {
-                    // 마지막으로 선택된(활성화된) 이미지는 실선, 나머지는 점선으로 구분
+                    // 마지막으로 선택된(활성화된) 이미지는 실선,
+                    // 나머지는 점선으로 구분
                     if (pb == selectedImage)
                     {
                         pen.DashStyle = DashStyle.Solid;
@@ -392,7 +397,7 @@ namespace photo
                     e.Graphics.DrawRectangle(pen, rect);
                 }
             }
-        }   
+        }
 
         private void EnableDoubleBuffering(Control control)
         {
@@ -558,7 +563,6 @@ namespace photo
             using (Graphics g = Graphics.FromImage(combinedImage))
             {
                 g.Clear(Color.White);
-
                 foreach (var pb in pictureBoxes)
                 {
                     g.DrawImage(pb.Image, pb.Location);
@@ -609,7 +613,6 @@ namespace photo
         }
 
         int tabNumber;
-
         private void btnNewTabPage_Click(object sender, EventArgs e)
         {
             // 항상 tabCount를 사용하여 새 탭 생성
@@ -641,13 +644,12 @@ namespace photo
             if (selectedTab != null)
             {
                 tabControl1.TabPages.Remove(selectedTab);
-
                 // ▼▼▼ 핵심: 남아있는 탭들을 처음부터 순서대로 번호 재지정 ▼▼▼
                 for (int i = 0; i < tabControl1.TabPages.Count; i++)
                 {
                     TabPage tab = tabControl1.TabPages[i];
                     tab.Text = $"tp {i + 1}"; // 보이는 텍스트 변경
-                    tab.Name = $"tp{i + 1}";   // 내부 이름 변경
+                    tab.Name = $"tp{i + 1}"; // 내부 이름 변경
                 }
 
                 // 다음에 생성될 탭 번호를 현재 탭 개수 + 1로 설정
@@ -658,7 +660,6 @@ namespace photo
         private Bitmap ResizeImageHighQuality(Image img, Size size)
         {
             if (size.Width <= 0 || size.Height <= 0) return null;
-
             Bitmap result = new Bitmap(size.Width, size.Height);
             using (Graphics g = Graphics.FromImage(result))
             {
@@ -682,7 +683,6 @@ namespace photo
                 if (imageEntry.pb != null)
                 {
                     Bitmap original = imageEntry.original;
-
                     // 현재 크기를 기준으로 1.2배 큰 새로운 크기 계산
                     int newWidth = (int)(pb.Width * 1.2f);
                     int newHeight = (int)(pb.Height * 1.2f);
@@ -690,7 +690,7 @@ namespace photo
                     // 최대 크기 제한 (원본 이미지의 MAX_SCALE 배를 넘지 않도록)
                     if (newWidth > original.Width * MAX_SCALE || newHeight > original.Height * MAX_SCALE)
                     {
-                        continue; // 너무 커지면 건너뛰기
+                        continue;
                     }
 
                     // 고화질 리사이징
@@ -718,7 +718,6 @@ namespace photo
                 if (imageEntry.pb != null)
                 {
                     Bitmap original = imageEntry.original;
-
                     // 현재 크기를 기준으로 0.8배 작은 새로운 크기 계산
                     int newWidth = (int)(pb.Width * 0.8f);
                     int newHeight = (int)(pb.Height * 0.8f);
@@ -726,7 +725,7 @@ namespace photo
                     // 최소 크기 제한 (원본 이미지의 MIN_SCALE 배보다 작아지지 않도록)
                     if (newWidth < original.Width * MIN_SCALE || newHeight < original.Height * MIN_SCALE)
                     {
-                        continue; // 너무 작아지면 건너뛰기
+                        continue;
                     }
 
                     // 고화질 리사이징
@@ -743,7 +742,6 @@ namespace photo
                 textBox2.Text = selectedImage.Height.ToString();
             }
         }
-
 
         private void InitializeDynamicControls()
         {
@@ -810,12 +808,11 @@ namespace photo
                 Properties.Resources.Emoji65, Properties.Resources.Emoji66, Properties.Resources.Emoji67, Properties.Resources.Emoji68,
                 Properties.Resources.Emoji69
             };
-
             int iconSize = 48;
             int emojiPadding = 8;
-            int emojiStartY = 50; // 이모티콘 목록이 시작될 Y 위치
+            int emojiStartY = 50;
+            // 이모티콘 목록이 시작될 Y 위치
             int iconsPerRow = (panel8.Width - emojiPadding * 2) / (iconSize + emojiPadding);
-
             for (int i = 0; i < emojis.Length; i++)
             {
                 var pic = new PictureBox
@@ -845,18 +842,18 @@ namespace photo
             btnApplyEmojis.Text = "적용";
             btnApplyEmojis.Size = new Size(100, 30);
             // 패널 너비의 중간쯤에 위치하도록 동적 계산
-            btnApplyEmojis.Location = new Point((panel8.Width - btnApplyEmojis.Width * 2 - 10) / 2, 850); // Y 위치는 적절히 조정하세요.
+            btnApplyEmojis.Location = new Point((panel8.Width - btnApplyEmojis.Width * 2 - 10) / 2, 850);
+            // Y 위치는 적절히 조정하세요.
             btnApplyEmojis.Click += BtnApplyEmojis_Click; // 클릭 이벤트 핸들러 연결
             panel8.Controls.Add(btnApplyEmojis);
-
             // '제거' 버튼 생성
             Button btnRemoveLastEmoji = new Button();
             btnRemoveLastEmoji.Text = "끝 제거";
             btnRemoveLastEmoji.Size = new Size(100, 30);
             btnRemoveLastEmoji.Location = new Point(btnApplyEmojis.Right + 10, btnApplyEmojis.Top);
-            btnRemoveLastEmoji.Click += BtnRemoveLastEmoji_Click; // 클릭 이벤트 핸들러 연결
+            btnRemoveLastEmoji.Click += BtnRemoveLastEmoji_Click;
+            // 클릭 이벤트 핸들러 연결
             panel8.Controls.Add(btnRemoveLastEmoji);
-
             if (dynamicPanels.Length > 0)
             {
                 currentVisiblePanel = dynamicPanels[0];
@@ -864,6 +861,7 @@ namespace photo
                 currentVisiblePanel.Invalidate();
             }
         }
+
         /// <summary>
         /// '적용' 버튼 클릭 시, 현재 배경 이미지 위의 모든 이모티콘을 합성합니다.
         /// </summary>
@@ -897,13 +895,12 @@ namespace photo
                 // 모든 이모티콘 컨트롤을 순회하며 비트맵에 그리기
                 foreach (PictureBox emoji in emojiControls)
                 {
-                    g.DrawImage(emoji.Image, emoji.Bounds); // Bounds는 Location과 Size를 모두 포함
+                    g.DrawImage(emoji.Image, emoji.Bounds);
                 }
             }
 
             // 합성된 이미지로 교체
             selectedImage.Image = newBitmap;
-
             // Tag에 저장된 원본 이미지도 최신화 (매우 중요!)
             // 이렇게 해야 나중에 또 다른 합성을 해도 이전 내용이 유지됨
             if (selectedImage.Tag is Bitmap oldBitmap)
@@ -911,15 +908,14 @@ namespace photo
                 oldBitmap.Dispose();
             }
             selectedImage.Tag = new Bitmap(newBitmap);
-
-
             // 사용이 끝난 이모티콘 컨트롤들은 모두 제거
             foreach (var control in emojiControls)
             {
                 selectedImage.Controls.Remove(control);
                 control.Dispose();
             }
-            selectedEmoji = null; // 선택된 이모티콘 참조 해제
+            selectedEmoji = null;
+            // 선택된 이모티콘 참조 해제
 
             MessageBox.Show("적용이 완료되었습니다.");
         }
@@ -937,7 +933,6 @@ namespace photo
 
             // 자식 컨트롤 중 PictureBox(이모티콘)를 찾음
             var lastEmoji = selectedImage.Controls.OfType<PictureBox>().LastOrDefault();
-
             if (lastEmoji != null)
             {
                 // 컨트롤 목록에서 제거하고 리소스 해제
@@ -1042,7 +1037,6 @@ namespace photo
 
             // 드래그 선택 상태 종료
             isMarqueeSelecting = false;
-
             // 드래그로 만들어진 사각형이 아주 작으면(단순 클릭으로 간주)
             if (marqueeRect.Width < 5 && marqueeRect.Height < 5)
             {
@@ -1071,7 +1065,6 @@ namespace photo
 
                 // 마지막으로 선택된 이미지를 대표 이미지로 설정
                 selectedImage = selectedImages.LastOrDefault();
-
                 // 텍스트박스 업데이트
                 if (selectedImage != null)
                 {
@@ -1098,7 +1091,8 @@ namespace photo
             {
                 using (Pen pen = new Pen(Color.DeepSkyBlue, 1))
                 {
-                    pen.DashStyle = DashStyle.Dash; // 점선 스타일
+                    pen.DashStyle = DashStyle.Dash;
+                    // 점선 스타일
                     e.Graphics.DrawRectangle(pen, marqueeRect);
                 }
             }
@@ -1135,13 +1129,11 @@ namespace photo
         private void UpdateSelectedImageSize()
         {
             if (selectedImages.Count == 0) return;
-
             if (int.TryParse(textBox1.Text, out int width) && int.TryParse(textBox2.Text, out int height))
             {
                 if (width <= 0 || height <= 0) return;
                 width = Math.Max(16, Math.Min(4000, width));
                 height = Math.Max(16, Math.Min(4000, height));
-
                 // 선택된 모든 이미지에 크기 적용
                 foreach (var pb in selectedImages)
                 {
@@ -1180,5 +1172,102 @@ namespace photo
             if (textBox2.Text != corrected.ToString()) textBox2.Text = corrected.ToString();
             UpdateSelectedImageSize();
         }
+
+        // ▼▼▼ 복사, 붙여넣기, 삭제 이벤트 핸들러 수정 ▼▼▼
+        private void toolStripMenuItem1_Click(object sender, EventArgs e)
+        {
+            // 복사: PictureBox의 이미지를 클립보드에 복사
+            ContextMenuStrip menu = (sender as ToolStripMenuItem)?.Owner as ContextMenuStrip;
+            if (menu != null && menu.SourceControl is PictureBox pictureBox)
+            {
+                if (pictureBox.Image != null)
+                {
+                    // 원본 이미지의 복사본을 클립보드에 저장
+                    Clipboard.SetImage(new Bitmap(pictureBox.Image));
+                }
+            }
+        }
+
+        private void toolStripMenuItem2_Click(object sender, EventArgs e)
+        {
+            // 붙여넣기: 클립보드의 이미지를 새로운 PictureBox에 붙여넣기
+            ContextMenuStrip menu = (sender as ToolStripMenuItem)?.Owner as ContextMenuStrip;
+            if (menu != null && menu.SourceControl is PictureBox sourcePictureBox)
+            {
+                if (Clipboard.ContainsImage())
+                {
+                    Image copiedImage = Clipboard.GetImage();
+                    TabPage currentTab = sourcePictureBox.Parent as TabPage;
+
+                    if (currentTab != null && copiedImage != null)
+                    {
+                        // 새 PictureBox 생성 및 속성 설정
+                        PictureBox newPictureBox = new PictureBox
+                        {
+                            Image = copiedImage,
+                            SizeMode = PictureBoxSizeMode.StretchImage,
+                            Anchor = AnchorStyles.Top | AnchorStyles.Left,
+                            Dock = DockStyle.None,
+                            Location = new Point(sourcePictureBox.Location.X + 20, sourcePictureBox.Location.Y + 20),
+                            Size = sourcePictureBox.Size,
+                            // Tag에 원본 비트맵 저장 (필요에 따라)
+                            Tag = new Bitmap(copiedImage),
+                            ContextMenuStrip = this.contextMenuStrip1 // ContextMenuStrip 연결
+                        };
+
+                        EnableDoubleBuffering(newPictureBox);
+
+                        // 이벤트 핸들러 연결
+                        newPictureBox.MouseDown += pictureBox_MouseDown;
+                        newPictureBox.MouseMove += pictureBox_MouseMove;
+                        newPictureBox.MouseUp += pictureBox_MouseUp;
+                        newPictureBox.Paint += pictureBox_Paint;
+
+                        // TabControl에 추가
+                        currentTab.Controls.Add(newPictureBox);
+
+                        // 새로 추가된 이미지를 선택
+                        selectedImages.Clear();
+                        selectedImages.Add(newPictureBox);
+                        selectedImage = newPictureBox;
+
+                        // UI 업데이트
+                        textBox1.Text = newPictureBox.Width.ToString();
+                        textBox2.Text = newPictureBox.Height.ToString();
+
+                        // 모든 이미지를 다시 그려 선택 테두리 업데이트
+                        foreach (var item in currentTab.Controls.OfType<PictureBox>())
+                        {
+                            item.Invalidate();
+                        }
+                    }
+                }
+            }
+        }
+
+        private void toolStripMenuItem4_Click(object sender, EventArgs e)
+        {
+            // 삭제: PictureBox 컨트롤 자체를 제거
+            ContextMenuStrip menu = (sender as ToolStripMenuItem)?.Owner as ContextMenuStrip;
+            if (menu != null && menu.SourceControl is PictureBox pictureBox)
+            {
+                // 선택된 이미지 목록에서 제거
+                if (selectedImages.Contains(pictureBox))
+                {
+                    selectedImages.Remove(pictureBox);
+                    selectedImage = selectedImages.LastOrDefault();
+                }
+
+                // 부모 컨트롤(TabPage)에서 PictureBox를 제거
+                if (pictureBox.Parent != null)
+                {
+                    pictureBox.Parent.Controls.Remove(pictureBox);
+                }
+
+                // 리소스 해제
+                pictureBox.Dispose();
+            }
+        }
+        // ▲▲▲ 수정된 이벤트 핸들러 ▲▲▲
     }
 }
