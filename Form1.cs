@@ -453,6 +453,9 @@ namespace photo
             ToolTip toolTip = new ToolTip();
             toolTip.SetToolTip(btn_NewFile, "새로만들기(Ctrl+N)");
             toolTip.SetToolTip(btn_Open, "파일 열기(Ctrl+O)");
+            toolTip.SetToolTip(btn_Save, "파일 저장(Ctrl+S)");
+            toolTip.SetToolTip(btnNewTabPage, "탭 페이지 추가");
+            toolTip.SetToolTip(btnDltTabPage, "탭 페이지 삭제");
             toolTip.SetToolTip(btn_Open, "파일 열기(Ctrl+O)");
             toolTip.SetToolTip(btn_Open, "파일 열기(Ctrl+O)");
             toolTip.SetToolTip(btn_Open, "파일 열기(Ctrl+O)");
@@ -1096,5 +1099,12 @@ namespace photo
                 textBox4.Text = loc.Y.ToString();
             }
         }
+
+        private void pictureBox2_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        
     }
 }

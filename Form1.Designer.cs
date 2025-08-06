@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             tapPage = new TabPage();
             tabControl1 = new TabControl();
             menuStrip1 = new MenuStrip();
@@ -37,26 +38,41 @@
             toolStripp_Save = new ToolStripMenuItem();
             toolStripMenuItem3 = new ToolStripMenuItem();
             groupBox2 = new GroupBox();
+            button5 = new Button();
+            button4 = new Button();
+            button3 = new Button();
+            pictureBox3 = new PictureBox();
+            pictureBox2 = new PictureBox();
+            pictureBox1 = new PictureBox();
             textBox4 = new TextBox();
-            textBox2 = new TextBox();
             button2 = new Button();
+            textBox2 = new TextBox();
             button1 = new Button();
-            textBox3 = new TextBox();
             button12 = new Button();
             button11 = new Button();
-            label4 = new Label();
             btnDltTabPage = new Button();
+            textBox3 = new TextBox();
+            label2 = new Label();
             btnNewTabPage = new Button();
-            textBox1 = new TextBox();
+            label3 = new Label();
             btn_Save = new Button();
             label1 = new Label();
             btn_NewFile = new Button();
-            label3 = new Label();
+            label4 = new Label();
             btn_Open = new Button();
-            label2 = new Label();
+            textBox1 = new TextBox();
+            button6 = new Button();
+            button7 = new Button();
+            button8 = new Button();
+            button9 = new Button();
+            button10 = new Button();
+            button13 = new Button();
             tabControl1.SuspendLayout();
             menuStrip1.SuspendLayout();
             groupBox2.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)pictureBox3).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)pictureBox2).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             SuspendLayout();
             // 
             // tapPage
@@ -65,7 +81,7 @@
             tapPage.Location = new Point(4, 24);
             tapPage.Name = "tapPage";
             tapPage.Padding = new Padding(3);
-            tapPage.Size = new Size(1371, 798);
+            tapPage.Size = new Size(1401, 798);
             tapPage.TabIndex = 1;
             tapPage.Text = "tp1";
             // 
@@ -76,7 +92,7 @@
             tabControl1.Location = new Point(138, 116);
             tabControl1.Name = "tabControl1";
             tabControl1.SelectedIndex = 0;
-            tabControl1.Size = new Size(1379, 826);
+            tabControl1.Size = new Size(1409, 826);
             tabControl1.TabIndex = 1;
             // 
             // menuStrip1
@@ -85,7 +101,7 @@
             menuStrip1.Items.AddRange(new ToolStripItem[] { toolStrip_File, toolStripMenuItem3 });
             menuStrip1.Location = new Point(0, 0);
             menuStrip1.Name = "menuStrip1";
-            menuStrip1.Size = new Size(1711, 24);
+            menuStrip1.Size = new Size(1741, 24);
             menuStrip1.TabIndex = 2;
             menuStrip1.Text = "menuStrip1";
             // 
@@ -126,6 +142,18 @@
             // groupBox2
             // 
             groupBox2.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            groupBox2.Controls.Add(button13);
+            groupBox2.Controls.Add(button10);
+            groupBox2.Controls.Add(button9);
+            groupBox2.Controls.Add(button8);
+            groupBox2.Controls.Add(button7);
+            groupBox2.Controls.Add(button6);
+            groupBox2.Controls.Add(button5);
+            groupBox2.Controls.Add(button4);
+            groupBox2.Controls.Add(button3);
+            groupBox2.Controls.Add(pictureBox3);
+            groupBox2.Controls.Add(pictureBox2);
+            groupBox2.Controls.Add(pictureBox1);
             groupBox2.Controls.Add(textBox4);
             groupBox2.Controls.Add(button2);
             groupBox2.Controls.Add(textBox2);
@@ -143,66 +171,135 @@
             groupBox2.Controls.Add(label4);
             groupBox2.Controls.Add(btn_Open);
             groupBox2.Controls.Add(textBox1);
-            groupBox2.Location = new Point(12, 27);
+            groupBox2.Location = new Point(2, 21);
             groupBox2.Name = "groupBox2";
-            groupBox2.Size = new Size(1505, 41);
+            groupBox2.Size = new Size(1746, 66);
             groupBox2.TabIndex = 3;
             groupBox2.TabStop = false;
             // 
+            // button5
+            // 
+            button5.BackColor = Color.Transparent;
+            button5.BackgroundImage = (Image)resources.GetObject("button5.BackgroundImage");
+            button5.BackgroundImageLayout = ImageLayout.Stretch;
+            button5.FlatAppearance.BorderSize = 0;
+            button5.FlatStyle = FlatStyle.Flat;
+            button5.Location = new Point(671, 20);
+            button5.Name = "button5";
+            button5.Size = new Size(30, 30);
+            button5.TabIndex = 10;
+            button5.UseVisualStyleBackColor = false;
+            // 
+            // button4
+            // 
+            button4.BackColor = Color.Transparent;
+            button4.BackgroundImage = (Image)resources.GetObject("button4.BackgroundImage");
+            button4.BackgroundImageLayout = ImageLayout.Stretch;
+            button4.FlatAppearance.BorderSize = 0;
+            button4.FlatStyle = FlatStyle.Flat;
+            button4.Location = new Point(602, 21);
+            button4.Name = "button4";
+            button4.Size = new Size(30, 30);
+            button4.TabIndex = 10;
+            button4.UseVisualStyleBackColor = false;
+            // 
+            // button3
+            // 
+            button3.BackColor = Color.Transparent;
+            button3.BackgroundImage = Properties.Resources._10;
+            button3.BackgroundImageLayout = ImageLayout.Stretch;
+            button3.FlatAppearance.BorderSize = 0;
+            button3.FlatStyle = FlatStyle.Flat;
+            button3.Location = new Point(529, 20);
+            button3.Name = "button3";
+            button3.Size = new Size(30, 30);
+            button3.TabIndex = 10;
+            button3.UseVisualStyleBackColor = false;
+            // 
+            // pictureBox3
+            // 
+            pictureBox3.BackgroundImage = Properties.Resources.gggggggggggggggggg_removebg_preview_removebg_preview;
+            pictureBox3.BackgroundImageLayout = ImageLayout.Stretch;
+            pictureBox3.Location = new Point(1325, 13);
+            pictureBox3.Name = "pictureBox3";
+            pictureBox3.Size = new Size(193, 50);
+            pictureBox3.TabIndex = 9;
+            pictureBox3.TabStop = false;
+            // 
+            // pictureBox2
+            // 
+            pictureBox2.BackgroundImage = Properties.Resources.gggggggggggggggggg_removebg_preview_removebg_preview;
+            pictureBox2.BackgroundImageLayout = ImageLayout.Stretch;
+            pictureBox2.Location = new Point(1513, 11);
+            pictureBox2.Name = "pictureBox2";
+            pictureBox2.Size = new Size(193, 50);
+            pictureBox2.TabIndex = 8;
+            pictureBox2.TabStop = false;
+            // 
+            // pictureBox1
+            // 
+            pictureBox1.BackgroundImage = Properties.Resources.gggggggggggggggggg_removebg_preview_removebg_preview;
+            pictureBox1.BackgroundImageLayout = ImageLayout.Stretch;
+            pictureBox1.Location = new Point(1700, 10);
+            pictureBox1.Name = "pictureBox1";
+            pictureBox1.Size = new Size(193, 50);
+            pictureBox1.TabIndex = 7;
+            pictureBox1.TabStop = false;
+            // 
             // textBox4
             // 
-            textBox4.Location = new Point(707, 14);
+            textBox4.BackColor = SystemColors.HighlightText;
+            textBox4.BorderStyle = BorderStyle.None;
+            textBox4.Location = new Point(1260, 39);
+            textBox4.Multiline = true;
             textBox4.Name = "textBox4";
             textBox4.Size = new Size(60, 23);
             textBox4.TabIndex = 6;
             textBox4.TextChanged += textBox2_TextChanged;
             // 
+            // button2
+            // 
+            button2.BackgroundImage = Properties.Resources._9;
+            button2.BackgroundImageLayout = ImageLayout.Stretch;
+            button2.FlatAppearance.BorderColor = Color.LavenderBlush;
+            button2.FlatStyle = FlatStyle.Flat;
+            button2.Location = new Point(466, 20);
+            button2.Name = "button2";
+            button2.Size = new Size(30, 30);
+            button2.TabIndex = 4;
+            button2.UseVisualStyleBackColor = true;
+            button2.Click += btn_righthegreeClick;
+            // 
             // textBox2
             // 
-            textBox2.Location = new Point(536, 14);
+            textBox2.BackColor = SystemColors.HighlightText;
+            textBox2.BorderStyle = BorderStyle.None;
+            textBox2.Location = new Point(1132, 39);
+            textBox2.Multiline = true;
             textBox2.Name = "textBox2";
             textBox2.Size = new Size(60, 23);
             textBox2.TabIndex = 6;
             textBox2.TextChanged += textBox2_TextChanged;
             // 
-            // button2
-            // 
-            button2.BackgroundImage = Properties.Resources._9;
-            button2.FlatAppearance.BorderColor = Color.LavenderBlush;
-            button2.FlatStyle = FlatStyle.Flat;
-            button2.Location = new Point(385, 12);
-            button2.Name = "button2";
-            button2.Size = new Size(25, 25);
-            button2.TabIndex = 4;
-            button2.UseVisualStyleBackColor = true;
-            button2.Click += btn_righthegreeClick;
-            // 
             // button1
             // 
             button1.BackgroundImage = Properties.Resources._8;
+            button1.BackgroundImageLayout = ImageLayout.Stretch;
             button1.FlatAppearance.BorderColor = Color.LavenderBlush;
             button1.FlatStyle = FlatStyle.Flat;
-            button1.Location = new Point(342, 12);
+            button1.Location = new Point(410, 20);
             button1.Name = "button1";
-            button1.Size = new Size(25, 25);
+            button1.Size = new Size(30, 30);
             button1.TabIndex = 3;
             button1.UseVisualStyleBackColor = true;
             button1.Click += btn_leftdegreeClick;
-            // 
-            // textBox3
-            // 
-            textBox3.Location = new Point(624, 14);
-            textBox3.Name = "textBox3";
-            textBox3.Size = new Size(60, 23);
-            textBox3.TabIndex = 6;
-            textBox3.TextChanged += textBox1_TextChanged;
             // 
             // button12
             // 
             button12.BackgroundImage = Properties.Resources._5;
             button12.FlatAppearance.BorderColor = Color.LavenderBlush;
             button12.FlatStyle = FlatStyle.Flat;
-            button12.Location = new Point(296, 13);
+            button12.Location = new Point(349, 23);
             button12.Name = "button12";
             button12.Size = new Size(25, 25);
             button12.TabIndex = 2;
@@ -214,62 +311,83 @@
             button11.BackgroundImage = Properties.Resources._7;
             button11.FlatAppearance.BorderColor = Color.LavenderBlush;
             button11.FlatStyle = FlatStyle.Flat;
-            button11.Location = new Point(249, 13);
+            button11.Location = new Point(286, 23);
             button11.Name = "button11";
             button11.Size = new Size(25, 25);
             button11.TabIndex = 2;
             button11.UseVisualStyleBackColor = true;
             button11.Click += button11_Click;
             // 
-            // label4
-            // 
-            label4.AutoSize = true;
-            label4.Location = new Point(686, 18);
-            label4.Name = "label4";
-            label4.Size = new Size(21, 15);
-            label4.TabIndex = 5;
-            label4.Text = "Y :";
-            // 
             // btnDltTabPage
             // 
             btnDltTabPage.BackgroundImage = Properties.Resources._11;
+            btnDltTabPage.BackgroundImageLayout = ImageLayout.Stretch;
             btnDltTabPage.FlatAppearance.BorderColor = Color.LavenderBlush;
             btnDltTabPage.FlatStyle = FlatStyle.Flat;
-            btnDltTabPage.Location = new Point(201, 13);
+            btnDltTabPage.Location = new Point(223, 21);
             btnDltTabPage.Name = "btnDltTabPage";
-            btnDltTabPage.Size = new Size(25, 25);
+            btnDltTabPage.Size = new Size(32, 31);
             btnDltTabPage.TabIndex = 1;
             btnDltTabPage.UseVisualStyleBackColor = true;
             btnDltTabPage.Click += btnDltTabPage_Click;
             // 
+            // textBox3
+            // 
+            textBox3.BackColor = SystemColors.HighlightText;
+            textBox3.BorderStyle = BorderStyle.None;
+            textBox3.Location = new Point(1260, 10);
+            textBox3.Multiline = true;
+            textBox3.Name = "textBox3";
+            textBox3.Size = new Size(60, 23);
+            textBox3.TabIndex = 6;
+            textBox3.TextChanged += textBox1_TextChanged;
+            // 
+            // label2
+            // 
+            label2.AutoSize = true;
+            label2.BackColor = Color.Transparent;
+            label2.Font = new Font("Noto Sans KR Medium", 9F, FontStyle.Bold, GraphicsUnit.Point);
+            label2.ForeColor = SystemColors.ControlDarkDark;
+            label2.Location = new Point(1111, 43);
+            label2.Name = "label2";
+            label2.Size = new Size(22, 17);
+            label2.TabIndex = 5;
+            label2.Text = "Y :";
+            // 
             // btnNewTabPage
             // 
             btnNewTabPage.BackgroundImage = Properties.Resources._31;
+            btnNewTabPage.BackgroundImageLayout = ImageLayout.Stretch;
             btnNewTabPage.FlatAppearance.BorderColor = Color.LavenderBlush;
             btnNewTabPage.FlatStyle = FlatStyle.Flat;
-            btnNewTabPage.Location = new Point(154, 13);
+            btnNewTabPage.Location = new Point(168, 22);
             btnNewTabPage.Name = "btnNewTabPage";
-            btnNewTabPage.Size = new Size(25, 25);
+            btnNewTabPage.Size = new Size(29, 29);
             btnNewTabPage.TabIndex = 1;
             btnNewTabPage.UseVisualStyleBackColor = true;
             btnNewTabPage.Click += btnNewTabPage_Click;
             // 
-            // textBox1
+            // label3
             // 
-            textBox1.Location = new Point(453, 14);
-            textBox1.Name = "textBox1";
-            textBox1.Size = new Size(60, 23);
-            textBox1.TabIndex = 6;
-            textBox1.TextChanged += textBox1_TextChanged;
+            label3.AutoSize = true;
+            label3.BackColor = Color.Transparent;
+            label3.Font = new Font("Noto Sans KR Medium", 9F, FontStyle.Bold, GraphicsUnit.Point);
+            label3.ForeColor = SystemColors.ControlDarkDark;
+            label3.Location = new Point(1239, 14);
+            label3.Name = "label3";
+            label3.Size = new Size(22, 17);
+            label3.TabIndex = 5;
+            label3.Text = "X :";
             // 
             // btn_Save
             // 
-            btn_Save.BackgroundImage = Properties.Resources._4;
+            btn_Save.BackgroundImage = Properties.Resources._111;
+            btn_Save.BackgroundImageLayout = ImageLayout.Stretch;
             btn_Save.FlatAppearance.BorderColor = Color.LavenderBlush;
             btn_Save.FlatStyle = FlatStyle.Flat;
-            btn_Save.Location = new Point(107, 13);
+            btn_Save.Location = new Point(112, 21);
             btn_Save.Name = "btn_Save";
-            btn_Save.Size = new Size(25, 25);
+            btn_Save.Size = new Size(31, 30);
             btn_Save.TabIndex = 0;
             btn_Save.UseVisualStyleBackColor = true;
             btn_Save.Click += btn_Save_Click;
@@ -277,9 +395,12 @@
             // label1
             // 
             label1.AutoSize = true;
-            label1.Location = new Point(432, 18);
+            label1.BackColor = Color.Transparent;
+            label1.Font = new Font("Noto Sans KR Medium", 9F, FontStyle.Bold, GraphicsUnit.Point);
+            label1.ForeColor = SystemColors.ControlDarkDark;
+            label1.Location = new Point(1111, 15);
             label1.Name = "label1";
-            label1.Size = new Size(21, 15);
+            label1.Size = new Size(22, 17);
             label1.TabIndex = 5;
             label1.Text = "X :";
             // 
@@ -287,50 +408,135 @@
             // 
             btn_NewFile.BackColor = Color.Transparent;
             btn_NewFile.BackgroundImage = Properties.Resources._6;
+            btn_NewFile.BackgroundImageLayout = ImageLayout.Stretch;
             btn_NewFile.FlatAppearance.BorderColor = Color.LavenderBlush;
             btn_NewFile.FlatStyle = FlatStyle.Flat;
-            btn_NewFile.Location = new Point(16, 12);
+            btn_NewFile.Location = new Point(12, 23);
             btn_NewFile.Name = "btn_NewFile";
             btn_NewFile.Size = new Size(25, 25);
             btn_NewFile.TabIndex = 0;
             btn_NewFile.UseVisualStyleBackColor = false;
             btn_NewFile.Click += btn_NewFile_Click;
             // 
-            // label3
+            // label4
             // 
-            label3.AutoSize = true;
-            label3.Location = new Point(603, 18);
-            label3.Name = "label3";
-            label3.Size = new Size(21, 15);
-            label3.TabIndex = 5;
-            label3.Text = "X :";
+            label4.AutoSize = true;
+            label4.BackColor = Color.Transparent;
+            label4.Font = new Font("Noto Sans KR Medium", 9F, FontStyle.Bold, GraphicsUnit.Point);
+            label4.ForeColor = SystemColors.ControlDarkDark;
+            label4.Location = new Point(1239, 43);
+            label4.Name = "label4";
+            label4.Size = new Size(22, 17);
+            label4.TabIndex = 5;
+            label4.Text = "Y :";
             // 
             // btn_Open
             // 
             btn_Open.BackgroundImage = Properties.Resources._23;
+            btn_Open.BackgroundImageLayout = ImageLayout.Stretch;
             btn_Open.FlatAppearance.BorderColor = Color.LavenderBlush;
             btn_Open.FlatStyle = FlatStyle.Flat;
-            btn_Open.Location = new Point(60, 12);
+            btn_Open.Location = new Point(59, 18);
             btn_Open.Name = "btn_Open";
-            btn_Open.Size = new Size(25, 25);
+            btn_Open.Size = new Size(31, 35);
             btn_Open.TabIndex = 0;
             btn_Open.UseVisualStyleBackColor = true;
             btn_Open.Click += btn_Open_Click;
             // 
-            // label2
+            // textBox1
             // 
-            label2.AutoSize = true;
-            label2.Location = new Point(515, 18);
-            label2.Name = "label2";
-            label2.Size = new Size(21, 15);
-            label2.TabIndex = 5;
-            label2.Text = "Y :";
+            textBox1.BackColor = SystemColors.HighlightText;
+            textBox1.BorderStyle = BorderStyle.None;
+            textBox1.Location = new Point(1132, 10);
+            textBox1.Multiline = true;
+            textBox1.Name = "textBox1";
+            textBox1.Size = new Size(60, 23);
+            textBox1.TabIndex = 6;
+            textBox1.TextChanged += textBox1_TextChanged;
+            // 
+            // button6
+            // 
+            button6.BackColor = Color.Transparent;
+            button6.BackgroundImage = (Image)resources.GetObject("button6.BackgroundImage");
+            button6.BackgroundImageLayout = ImageLayout.Stretch;
+            button6.FlatAppearance.BorderSize = 0;
+            button6.FlatStyle = FlatStyle.Flat;
+            button6.Location = new Point(742, 21);
+            button6.Name = "button6";
+            button6.Size = new Size(30, 30);
+            button6.TabIndex = 10;
+            button6.UseVisualStyleBackColor = false;
+            // 
+            // button7
+            // 
+            button7.BackColor = Color.Transparent;
+            button7.BackgroundImage = (Image)resources.GetObject("button7.BackgroundImage");
+            button7.BackgroundImageLayout = ImageLayout.Stretch;
+            button7.FlatAppearance.BorderSize = 0;
+            button7.FlatStyle = FlatStyle.Flat;
+            button7.Location = new Point(806, 23);
+            button7.Name = "button7";
+            button7.Size = new Size(30, 30);
+            button7.TabIndex = 10;
+            button7.UseVisualStyleBackColor = false;
+            // 
+            // button8
+            // 
+            button8.BackColor = Color.Transparent;
+            button8.BackgroundImage = (Image)resources.GetObject("button8.BackgroundImage");
+            button8.BackgroundImageLayout = ImageLayout.Stretch;
+            button8.FlatAppearance.BorderSize = 0;
+            button8.FlatStyle = FlatStyle.Flat;
+            button8.Location = new Point(873, 22);
+            button8.Name = "button8";
+            button8.Size = new Size(30, 30);
+            button8.TabIndex = 10;
+            button8.UseVisualStyleBackColor = false;
+            // 
+            // button9
+            // 
+            button9.BackColor = Color.Transparent;
+            button9.BackgroundImage = (Image)resources.GetObject("button9.BackgroundImage");
+            button9.BackgroundImageLayout = ImageLayout.Stretch;
+            button9.FlatAppearance.BorderSize = 0;
+            button9.FlatStyle = FlatStyle.Flat;
+            button9.Location = new Point(933, 23);
+            button9.Name = "button9";
+            button9.Size = new Size(30, 30);
+            button9.TabIndex = 10;
+            button9.UseVisualStyleBackColor = false;
+            // 
+            // button10
+            // 
+            button10.BackColor = Color.Transparent;
+            button10.BackgroundImage = (Image)resources.GetObject("button10.BackgroundImage");
+            button10.BackgroundImageLayout = ImageLayout.Stretch;
+            button10.FlatAppearance.BorderSize = 0;
+            button10.FlatStyle = FlatStyle.Flat;
+            button10.Location = new Point(985, 23);
+            button10.Name = "button10";
+            button10.Size = new Size(30, 30);
+            button10.TabIndex = 10;
+            button10.UseVisualStyleBackColor = false;
+            // 
+            // button13
+            // 
+            button13.BackColor = Color.Transparent;
+            button13.BackgroundImage = (Image)resources.GetObject("button13.BackgroundImage");
+            button13.BackgroundImageLayout = ImageLayout.Stretch;
+            button13.FlatAppearance.BorderSize = 0;
+            button13.FlatStyle = FlatStyle.Flat;
+            button13.Location = new Point(1049, 23);
+            button13.Name = "button13";
+            button13.Size = new Size(30, 30);
+            button13.TabIndex = 10;
+            button13.UseVisualStyleBackColor = false;
             // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1711, 954);
+            ClientSize = new Size(1741, 954);
             Controls.Add(groupBox2);
             Controls.Add(tabControl1);
             Controls.Add(menuStrip1);
@@ -343,6 +549,9 @@
             menuStrip1.PerformLayout();
             groupBox2.ResumeLayout(false);
             groupBox2.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)pictureBox3).EndInit();
+            ((System.ComponentModel.ISupportInitialize)pictureBox2).EndInit();
+            ((System.ComponentModel.ISupportInitialize)pictureBox1).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -375,5 +584,17 @@
         private TextBox textBox3;
         private Label label4;
         private Label label3;
+        private PictureBox pictureBox1;
+        private PictureBox pictureBox3;
+        private PictureBox pictureBox2;
+        private Button button3;
+        private Button button5;
+        private Button button4;
+        private Button button13;
+        private Button button10;
+        private Button button9;
+        private Button button8;
+        private Button button7;
+        private Button button6;
     }
 }
