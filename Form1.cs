@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -69,6 +70,11 @@ namespace photo
 
 
         // 문형 새로운 추가 전역변수 및 클래스
+        private bool isCropping = false;
+        private Point cropStartPoint;
+        private Rectangle cropRect;
+        private Dictionary<PictureBox, Bitmap> originalImages = new();
+        private TrackBar tbMosaicSize;
         private Panel panelColorSelected;   // "색상 선택" 미리보기
         private Panel panelColorPicked;     // 스포이드로 선택된 색상 미리보기
         private Label lblRGB;               // RGB + Hex 표시
@@ -79,6 +85,9 @@ namespace photo
         private Stack<EditAction> redoStack = new Stack<EditAction>(); //  추가됨
         private bool isDrawing = false;                // 마우스 드래그 중인지 여부
         private Point lastDrawPoint = Point.Empty;     // 마지막 그렸던 점
+        private bool isMosaicing = false; // 모자이크 중인지 여부
+        private Point mosaicStartPoint;   // 드래그 시작 위치
+        private Rectangle mosaicRect;     // 드래그된 사각형
 
 
         // 각 PictureBox 별로 그려진 선들을 저장
@@ -89,6 +98,8 @@ namespace photo
         private string currentWorkMode = "이동";
 
         private TrackBar tbPenSize; // ← 펜과 지우개에 모두 사용됨
+        private int EraserRadius => tbEraserSize?.Value ?? 10;
+        private TrackBar tbEraserSize; // 지우개 크기 조절용 트랙바
 
         public class PenStroke
         {
@@ -107,8 +118,10 @@ namespace photo
             }
         }
 
+
         // 이문형전역변수및 클래스 추가 끝
         //  현재 선택된 작업 모드
+       
 
 
         public class EditAction
@@ -117,13 +130,15 @@ namespace photo
             public Bitmap Before { get; set; }
             public Bitmap After { get; set; }
             public string ActionType { get; set; }
+            public Rectangle? AffectedArea { get; set; }  // ← 중요! 클릭 좌표 비교용
 
-            public EditAction(PictureBox target, Bitmap before, Bitmap after, string actionType)
+            public EditAction(PictureBox target, Bitmap before, Bitmap after, string actionType, Rectangle? affectedArea = null)
             {
                 Target = target;
                 Before = before;
                 After = after;
                 ActionType = actionType;
+                AffectedArea = affectedArea;
             }
         }
         public Form1()
@@ -287,82 +302,86 @@ namespace photo
 
 
         private void btn_Open_Click(object sender, EventArgs e)
-{
-    OpenFileDialog openFileDialog = new OpenFileDialog();
-    openFileDialog.Title = "이미지 열기";
-    openFileDialog.Filter = "이미지 파일|*.jpg;*.jpeg;*.png;*.bmp;*.gif";
-
-    if (openFileDialog.ShowDialog() == DialogResult.OK)
-    {
-        string filePath = openFileDialog.FileName;
-        try
         {
-            TabPage currentTab = tabControl1.SelectedTab;
-            PictureBox pb = new PictureBox();
+            OpenFileDialog openFileDialog = new OpenFileDialog();
+            openFileDialog.Title = "이미지 열기";
+            openFileDialog.Filter = "이미지 파일|*.jpg;*.jpeg;*.png;*.bmp;*.gif";
 
-            pb.AllowDrop = true;
-            pb.DragEnter += PictureBox_DragEnter;
-            pb.DragOver += PictureBox_DragOver;
-            pb.DragLeave += PictureBox_DragLeave;
-            pb.DragDrop += PictureBox_DragDrop;
-
-            // --- 이미지 설정 ---
-            pb.SizeMode = PictureBoxSizeMode.StretchImage;
-            pb.Anchor = AnchorStyles.Top | AnchorStyles.Left;
-            pb.Dock = DockStyle.None;
-            pb.Location = new Point(10, 30);
-            EnableDoubleBuffering(pb);
-
-            Bitmap originalCopy;
-            using (var original = new Bitmap(Image.FromFile(filePath)))
+            if (openFileDialog.ShowDialog() == DialogResult.OK)
             {
-                originalCopy = new Bitmap(original);
-            }
+                string filePath = openFileDialog.FileName;
+                try
+                {
+                    TabPage currentTab = tabControl1.SelectedTab;
+                    PictureBox pb = new PictureBox();
 
-            pb.Image = new Bitmap(originalCopy);
-            pb.Size = pb.Image.Size;
-            pb.Tag = originalCopy;
+                    pb.AllowDrop = true;
+                    pb.DragEnter += PictureBox_DragEnter;
+                    pb.DragOver += PictureBox_DragOver;
+                    pb.DragLeave += PictureBox_DragLeave;
+                    pb.DragDrop += PictureBox_DragDrop;
 
-            imageList.Add((pb, originalCopy));
+                    // --- 이미지 설정 ---
+                    pb.SizeMode = PictureBoxSizeMode.StretchImage;
+                    pb.Anchor = AnchorStyles.Top | AnchorStyles.Left;
+                    pb.Dock = DockStyle.None;
+                    pb.Location = new Point(10, 30);
+                    EnableDoubleBuffering(pb);
 
-            // [수정된 부분 1] 투명도 기본값 등록
-            imageTransparencyMap[pb] = 255;
+                    Bitmap originalCopy;
+                    using (var original = new Bitmap(Image.FromFile(filePath)))
+                    {
+                        originalCopy = new Bitmap(original);
+                    }
 
-            // --- 이벤트 핸들러 연결 ---
-            pb.MouseDown += pictureBox_MouseDown;
-            pb.MouseMove += pictureBox_MouseMove;
-            pb.MouseUp += pictureBox_MouseUp;
-            pb.Paint += pictureBox_Paint;
+                    pb.Image = new Bitmap(originalCopy);
+                    pb.Size = pb.Image.Size;
+                    pb.Tag = originalCopy;
 
-            currentTab.Controls.Add(pb);
+                    imageList.Add((pb, originalCopy));
 
-            // 선택된 이미지 설정
-            selectedImage = pb;
-            textBox1.Text = pb.Width.ToString();
-            textBox2.Text = pb.Height.ToString();
+                    // [수정된 부분 1] 투명도 기본값 등록
+                    imageTransparencyMap[pb] = 255;
 
-            // [수정된 부분 2] 선택된 이미지의 투명도 트랙바 위치 반영
-            if (imageTransparencyMap.TryGetValue(pb, out int alpha))
-            {
-                tbTransparencyGlobal.Value = alpha;
-            }
-            else
-            {
-                tbTransparencyGlobal.Value = 255;
-                imageTransparencyMap[pb] = 255;
+                    // --- 이벤트 핸들러 연결 ---
+                    pb.MouseDown += pictureBox_MouseDown;
+                    pb.MouseMove += pictureBox_MouseMove;
+                    pb.MouseUp += pictureBox_MouseUp;
+                    pb.Paint += pictureBox_Paint;
+
+                    currentTab.Controls.Add(pb);
+
+                    // 선택된 이미지 설정
+                    selectedImage = pb;
+                    textBox1.Text = pb.Width.ToString();
+                    textBox2.Text = pb.Height.ToString();
+
+                    // [수정된 부분 2] 선택된 이미지의 투명도 트랙바 위치 반영
+                    if (imageTransparencyMap.TryGetValue(pb, out int alpha))
+                    {
+                        tbTransparencyGlobal.Value = alpha;
+                    }
+                    else
+                    {
+                        tbTransparencyGlobal.Value = 255;
+                        imageTransparencyMap[pb] = 255;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("이미지를 불러오는 중 오류 발생:\n" + ex.Message);
+                }
             }
         }
-        catch (Exception ex)
-        {
-            MessageBox.Show("이미지를 불러오는 중 오류 발생:\n" + ex.Message);
-        }
-    }
-}
 
 
         private void pictureBox_MouseDown(object sender, MouseEventArgs e)
         {
-            if (currentWorkMode == "펜" && e.Button == MouseButtons.Left && sender is PictureBox pbPen && pbPen.Image != null)
+            if (sender is not PictureBox pb || pb.Image == null || e.Button != MouseButtons.Left)
+                return;
+
+            // --- [펜 모드] ---
+            if (currentWorkMode == "펜")
             {
                 isDrawing = true;
 
@@ -373,94 +392,136 @@ namespace photo
                 };
                 currentStroke.Points.Add(e.Location);
 
-                if (!penStrokesMap.ContainsKey(pbPen))
+                if (!penStrokesMap.ContainsKey(pb))
                 {
-                    penStrokesMap[pbPen] = new List<PenStroke>();
+                    penStrokesMap[pb] = new List<PenStroke>();
                 }
 
-                pbPen.Cursor = Cursors.Cross;
+                pb.Cursor = Cursors.Cross;
                 return;
             }
-            if (currentWorkMode == "스포이드" && e.Button == MouseButtons.Left && sender is PictureBox pbSpoid && pbSpoid.Image != null)
+
+            // --- [지우개 모드] ---
+            if (currentWorkMode == "지우개")
             {
-                Bitmap bmp = pbSpoid.Image as Bitmap;
+                isDrawing = true;
+                pb.Cursor = Cursors.Cross;
+                return;
+            }
+
+            // --- [모자이크 모드] ---
+            if (currentWorkMode == "모자이크")
+            {
+                mosaicStartPoint = e.Location;
+                isMosaicing = true;
+                return;
+            }
+
+            // --- [스포이드 모드] ---
+            if (currentWorkMode == "스포이드")
+            {
+                Bitmap bmp = pb.Image as Bitmap;
                 if (bmp != null && e.X >= 0 && e.Y >= 0 && e.X < bmp.Width && e.Y < bmp.Height)
                 {
                     Color picked = bmp.GetPixel(e.X, e.Y);
                     panelColorPicked.BackColor = picked;
                     panelColorSelected.BackColor = picked;
 
-                    // RGB/Hex 라벨도 업데이트
                     lblRGB.Text = $"RGB: {picked.R}, {picked.G}, {picked.B}\nHex: #{picked.R:X2}{picked.G:X2}{picked.B:X2}";
                 }
                 return;
             }
-            if (sender is PictureBox pb && pb.Image != null && e.Button == MouseButtons.Left)
+            if (currentWorkMode == "자르기" && e.Button == MouseButtons.Left && sender is PictureBox pbCrop && pbCrop.Image != null)
             {
-                bool isCtrlPressed = (Control.ModifierKeys & Keys.Control) == Keys.Control;
-                if (isCtrlPressed)
+                isCropping = true;
+                cropStartPoint = e.Location;
+                pbCrop.Cursor = Cursors.Cross;
+                return;
+            }
+            if (currentWorkMode == "삭제" && e.Button == MouseButtons.Left)
+            {
+                Point clickPoint = e.Location;
+
+                var targetAction = undoStack
+                    .Where(a => a.ActionType == "Mosaic" &&
+                                a.Target == pb &&
+                                a.AffectedArea.HasValue &&
+                                Enlarge(a.AffectedArea.Value, 10).Contains(clickPoint)) // ← 넉넉하게 10픽셀 확장
+                    .LastOrDefault();
+
+                if (targetAction != null)
                 {
-                    if (selectedImages.Contains(pb))
-                    {
-                        selectedImages.Remove(pb);
-                        selectedImage = selectedImages.LastOrDefault();
-                    }
-                    else
-                    {
-                        selectedImages.Add(pb);
-                        selectedImage = pb;
-                    }
+                    RestoreMosaicArea(pb, targetAction); // ← 전체 복원 대신 영역만 복원
+                    undoStack = new Stack<EditAction>(undoStack.Where(a => a != targetAction));
+                }
+
+                return;
+            }
+
+            // --- [기본 선택/이동/리사이징 모드] ---
+            bool isCtrlPressed = (Control.ModifierKeys & Keys.Control) == Keys.Control;
+            if (isCtrlPressed)
+            {
+                if (selectedImages.Contains(pb))
+                {
+                    selectedImages.Remove(pb);
+                    selectedImage = selectedImages.LastOrDefault();
                 }
                 else
                 {
-                    if (!selectedImages.Contains(pb))
-                    {
-                        foreach (var item in selectedImages) { item.Invalidate(); }
-                        selectedImages.Clear();
-                    }
-                    if (!selectedImages.Contains(pb))
-                    {
-                        selectedImages.Add(pb);
-                    }
+                    selectedImages.Add(pb);
                     selectedImage = pb;
                 }
-
-                if (selectedImage != null)
+            }
+            else
+            {
+                if (!selectedImages.Contains(pb))
                 {
-                    textBox1.Text = selectedImage.Width.ToString();
-                    textBox2.Text = selectedImage.Height.ToString();
+                    foreach (var item in selectedImages) { item.Invalidate(); }
+                    selectedImages.Clear();
                 }
-
-                foreach (var item in selectedImages) { item.Invalidate(); }
-
-                if (!string.IsNullOrEmpty(resizeDirection))
+                if (!selectedImages.Contains(pb))
                 {
-                    isResizing = true;
-                    isDragging = false;
+                    selectedImages.Add(pb);
                 }
-                else
-                {
-                    isDragging = true;
-                    isResizing = false;
+                selectedImage = pb;
+            }
 
-                    dragStartPositions.Clear();
-                    dragStartMousePosition = pb.Parent.PointToClient(MousePosition);
+            if (selectedImage != null)
+            {
+                textBox1.Text = selectedImage.Width.ToString();
+                textBox2.Text = selectedImage.Height.ToString();
+            }
 
-                    foreach (var selectedPb in selectedImages)
-                    {
-                        dragStartPositions.Add(selectedPb, selectedPb.Location);
-                    }
-                }
+            foreach (var item in selectedImages) { item.Invalidate(); }
 
-                if (imageTransparencyMap.TryGetValue(selectedImage, out int selectedAlpha))
+            if (!string.IsNullOrEmpty(resizeDirection))
+            {
+                isResizing = true;
+                isDragging = false;
+            }
+            else
+            {
+                isDragging = true;
+                isResizing = false;
+
+                dragStartPositions.Clear();
+                dragStartMousePosition = pb.Parent.PointToClient(MousePosition);
+
+                foreach (var selectedPb in selectedImages)
                 {
-                    tbTransparencyGlobal.Value = selectedAlpha;
+                    dragStartPositions.Add(selectedPb, selectedPb.Location);
                 }
-                else
-                {
-                    tbTransparencyGlobal.Value = 255;
-                    imageTransparencyMap[selectedImage] = 255;
-                }
+            }
+
+            if (imageTransparencyMap.TryGetValue(selectedImage, out int selectedAlpha))
+            {
+                tbTransparencyGlobal.Value = selectedAlpha;
+            }
+            else
+            {
+                tbTransparencyGlobal.Value = 255;
+                imageTransparencyMap[selectedImage] = 255;
             }
         }
 
@@ -468,44 +529,94 @@ namespace photo
 
 
 
+
         private void pictureBox_MouseMove(object sender, MouseEventArgs e)
         {
-            PictureBox pb = sender as PictureBox;
-            if (pb == null) return;
+            if (sender is not PictureBox pb || pb.Image == null) return;
 
-            // --- [지우개 모드] ---
-            if (currentWorkMode == "지우개" && isDrawing && pb.Image != null)
+            // --- [모자이크 모드: 드래그 중 실시간 적용] ---
+            if (currentWorkMode == "모자이크" && isMosaicing)
             {
-                Bitmap bmp = pb.Image as Bitmap;
-                if (bmp == null) return;
+                Point mosaicEndPoint = e.Location;
 
-                using (Graphics g = Graphics.FromImage(bmp))
-                using (SolidBrush brush = new SolidBrush(Color.Transparent))
+                mosaicRect = new Rectangle(
+                    Math.Min(mosaicStartPoint.X, mosaicEndPoint.X),
+                    Math.Min(mosaicStartPoint.Y, mosaicEndPoint.Y),
+                    Math.Abs(mosaicStartPoint.X - mosaicEndPoint.X),
+                    Math.Abs(mosaicStartPoint.Y - mosaicEndPoint.Y)
+                );
+
+                if (!originalImages.ContainsKey(pb))
                 {
-                    int size = tbPenSize.Value;
-                    Rectangle eraseRect = new Rectangle(e.X - size / 2, e.Y - size / 2, size, size);
-
-                    g.CompositingMode = CompositingMode.SourceCopy; // 알파 0으로 덮어쓰기
-                    g.FillRectangle(brush, eraseRect);
+                    originalImages[pb] = new Bitmap(pb.Image); // 최초 저장
                 }
 
+                Bitmap original = originalImages[pb];
+
+                // 기존 이미지를 복사 (전체 복사 X → 모자이크 사각형만 그리기용)
+                Bitmap preview = new Bitmap(original);
+
+                // 실제 모자이크 영역과 이미지 경계를 겹치게 조절
+                Rectangle mosaicRectClamped = Rectangle.Intersect(
+                    new Rectangle(0, 0, preview.Width, preview.Height),
+                    mosaicRect
+                );
+
+                using (Graphics g = Graphics.FromImage(preview))
+                {
+                    // ApplyMosaic이 preview 자체를 바꾸게 됨
+                    ApplyMosaic(preview, mosaicRectClamped, tbMosaicSize.Value);
+                }
+
+                pb.Image = preview;
                 pb.Invalidate();
-                lastDrawPoint = e.Location;
                 return;
             }
 
-           
-            if (pb == null) return;
+            // --- [지우개 모드: 펜 스트로크 제거] ---
+            if (currentWorkMode == "지우개" && isDrawing)
+            {
+                if (penStrokesMap.TryGetValue(pb, out var strokes))
+                {
+                    Point eraserCenter = e.Location;
+                    float threshold = EraserRadius * 1.2f;
 
-            if (currentWorkMode == "펜" && isDrawing && pb.Image != null && currentStroke != null)
+                    var toRemove = new List<PenStroke>();
+
+                    foreach (var stroke in strokes)
+                    {
+                        for (int i = 0; i < stroke.Points.Count - 1; i++)
+                        {
+                            Point p1 = stroke.Points[i];
+                            Point p2 = stroke.Points[i + 1];
+
+                            float distance = DistanceFromPointToSegment(eraserCenter, p1, p2);
+                            if (distance <= threshold)
+                            {
+                                toRemove.Add(stroke);
+                                break;
+                            }
+                        }
+                    }
+
+                    foreach (var stroke in toRemove)
+                        strokes.Remove(stroke);
+
+                    pb.Invalidate();
+                }
+                return;
+            }
+
+            // --- [펜 모드: 선 그리기] ---
+            if (currentWorkMode == "펜" && isDrawing && currentStroke != null)
             {
                 currentStroke.Points.Add(e.Location);
-                pb.Invalidate(); // 다시 그리기 요청
+                pb.Invalidate();
                 return;
             }
 
-            // --- [스포이드 모드] ---
-            if (currentWorkMode == "스포이드" && pb.Image != null)
+            // --- [스포이드 모드: 색상 추출] ---
+            if (currentWorkMode == "스포이드")
             {
                 Point mousePos = e.Location;
                 Bitmap bmp = pb.Image as Bitmap;
@@ -517,6 +628,19 @@ namespace photo
                 }
 
                 pb.Cursor = Cursors.Cross;
+                return;
+            }
+            if (currentWorkMode == "자르기" && isCropping && sender is PictureBox pbCrop && pbCrop.Image != null)
+            {
+                Point cropEnd = e.Location;
+                cropRect = new Rectangle(
+                    Math.Min(cropStartPoint.X, cropEnd.X),
+                    Math.Min(cropStartPoint.Y, cropEnd.Y),
+                    Math.Abs(cropStartPoint.X - cropEnd.X),
+                    Math.Abs(cropStartPoint.Y - cropEnd.Y)
+                );
+
+                pbCrop.Invalidate(); // Paint로 자르기 미리보기 표시
                 return;
             }
 
@@ -552,7 +676,7 @@ namespace photo
                 return;
             }
 
-            // --- [드래그 중] ---
+            // --- [드래그 중: 이동] ---
             if (isDragging)
             {
                 Point currentMousePosition = pb.Parent.PointToClient(MousePosition);
@@ -594,11 +718,11 @@ namespace photo
 
 
 
+
         private void pictureBox_MouseUp(object sender, MouseEventArgs e)
         {
             if (sender is PictureBox pb)
             {
-                // [펜 모드 추가] 마우스 떼면 드로잉 종료
                 if (currentWorkMode == "펜" && currentStroke != null)
                 {
                     if (penStrokesMap.TryGetValue(pb, out var strokes))
@@ -617,6 +741,50 @@ namespace photo
                     UpdateSelectedImageSize();
                 }
 
+                if (currentWorkMode == "지우개")
+                {
+                    isDrawing = false;
+                    return;
+                }
+
+                if (currentWorkMode == "모자이크" && isMosaicing)
+                {
+                    isMosaicing = false;
+
+                    Point end = e.Location;
+                    Rectangle rect = NormalizeRectangle(new Rectangle(mosaicStartPoint.X, mosaicStartPoint.Y, end.X - mosaicStartPoint.X, end.Y - mosaicStartPoint.Y));
+
+                    if (!originalImages.ContainsKey(pb)) return;
+
+                    Bitmap before = originalImages[pb];
+                    Bitmap working = new Bitmap(pb.Image);
+
+                    ApplyMosaic(working, rect, tbMosaicSize.Value);
+                    pb.Image = working;
+                    pb.Invalidate();
+
+                    undoStack.Push(new EditAction(pb, before, (Bitmap)working.Clone(), "Mosaic", rect));
+                    originalImages.Remove(pb);
+                }
+
+                if (currentWorkMode == "자르기" && isCropping && sender is PictureBox pbCrop && pbCrop.Image != null)
+                {
+                    isCropping = false;
+
+                    Bitmap rendered = new Bitmap(pbCrop.Width, pbCrop.Height);
+                    pbCrop.DrawToBitmap(rendered, pbCrop.ClientRectangle); // 모든 편집 포함하여 캡처
+
+                    Rectangle intersected = Rectangle.Intersect(cropRect, new Rectangle(Point.Empty, rendered.Size));
+                    if (intersected.Width > 0 && intersected.Height > 0)
+                    {
+                        Bitmap cropped = rendered.Clone(intersected, rendered.PixelFormat);
+                        ShowCroppedImage(cropped); // 새 PictureBox 띄우기
+                    }
+
+                    pbCrop.Invalidate(); // 자르기 영역 사라지게 다시 그리기
+                    return;
+                }
+
                 isDragging = false;
                 isResizing = false;
                 draggingPictureBox = null;
@@ -625,6 +793,7 @@ namespace photo
                 pb.Invalidate();
             }
         }
+
 
         private void pictureBox_Paint(object sender, PaintEventArgs e)
         {
@@ -673,6 +842,13 @@ namespace photo
                     pen.DashStyle = DashStyle.Solid;
                     e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
                     e.Graphics.DrawLines(pen, currentStroke.Points.ToArray());
+                }
+            }
+            if (currentWorkMode == "자르기" && isCropping && cropRect.Width > 0 && cropRect.Height > 0)
+            {
+                using (Pen cropPen = new Pen(Color.Red, 2) { DashStyle = DashStyle.Dash })
+                {
+                    e.Graphics.DrawRectangle(cropPen, cropRect);
                 }
             }
         }
@@ -1167,27 +1343,21 @@ namespace photo
         // 이문형 메소드
         private void InitializePanel1()
         {
-            Panel panel1 = dynamicPanels[0]; // 1번 패널
+            Panel panel1 = dynamicPanels[0];
             panel1.Controls.Clear();
             panel1.AutoScroll = true;
 
             int marginTop = 20;
             int spacing = 15;
             int controlWidth = 200;
-            int labelWidth = 100;
-
             int currentY = marginTop;
 
             // 1. 이미지 투명도
-            Label lblTransparency = new Label
-            {
-                Text = "이미지 투명도",
-                Location = new Point(10, currentY)
-            };
+            Label lblTransparency = new Label { Text = "이미지 투명도", Location = new Point(10, currentY) };
             panel1.Controls.Add(lblTransparency);
             currentY = lblTransparency.Bottom + spacing;
 
-            tbTransparencyGlobal = new TrackBar  // ← 전역변수에 생성만!
+            tbTransparencyGlobal = new TrackBar
             {
                 Minimum = 0,
                 Maximum = 255,
@@ -1198,16 +1368,10 @@ namespace photo
             };
             panel1.Controls.Add(tbTransparencyGlobal);
             tbTransparencyGlobal.ValueChanged += TbTransparencyGlobal_ValueChanged;
-
             currentY = tbTransparencyGlobal.Bottom + spacing;
 
             // 2. 색상 선택
-            Button btnColorSelect = new Button
-            {
-                Text = "색상 선택",
-                Location = new Point(10, currentY),
-                Size = new Size(80, 30)
-            };
+            Button btnColorSelect = new Button { Text = "색상 선택", Location = new Point(10, currentY), Size = new Size(80, 30) };
             panel1.Controls.Add(btnColorSelect);
             btnColorSelect.Click += BtnColorSelect_Click;
 
@@ -1228,13 +1392,7 @@ namespace photo
             };
             panel1.Controls.Add(lblRGB);
 
-            // ▼ 스포이드 선택 결과 미리보기용 ▼
-            Label lblPicked = new Label
-            {
-                Text = "스포이드 색상",
-                Location = new Point(10, btnColorSelect.Bottom + spacing),
-                AutoSize = true
-            };
+            Label lblPicked = new Label { Text = "스포이드 색상", Location = new Point(10, btnColorSelect.Bottom + spacing), AutoSize = true };
             panel1.Controls.Add(lblPicked);
 
             panelColorPicked = new Panel
@@ -1259,8 +1417,7 @@ namespace photo
             RadioButton[] modeButtons = new RadioButton[modes.Length];
             for (int i = 0; i < modes.Length; i++)
             {
-                int index = i; //  핵심: 지역 변수로 인덱스 복사]
-
+                int index = i;
                 modeButtons[i] = new RadioButton
                 {
                     Text = modes[i],
@@ -1268,42 +1425,26 @@ namespace photo
                     AutoSize = true,
                     Checked = (modes[index] == "이동")
                 };
-
-                // [수정] 이벤트 핸들러에서 index 사용
                 modeButtons[i].CheckedChanged += (s, e) =>
                 {
                     if (modeButtons[index].Checked)
                     {
                         currentWorkMode = modeButtons[index].Text;
-
-                        if (currentWorkMode == "스포이드")
-                            this.Cursor = Cursors.Cross;
-                        else
-                            this.Cursor = Cursors.Default;
+                        this.Cursor = (currentWorkMode == "스포이드") ? Cursors.Cross : Cursors.Default;
                     }
                 };
-
                 gbModes.Controls.Add(modeButtons[i]);
             }
             panel1.Controls.Add(gbModes);
             currentY = gbModes.Bottom + spacing;
 
             // 4. 되돌리기 버튼
-            Button btnUndo = new Button
-            {
-                Text = "되돌리기",
-                Location = new Point(10, currentY),
-                Width = 100
-            };
+            Button btnUndo = new Button { Text = "되돌리기", Location = new Point(10, currentY), Width = 100 };
             panel1.Controls.Add(btnUndo);
             currentY = btnUndo.Bottom + spacing;
 
             // 5. 펜/지우개 속성
-            Label lblPen = new Label
-            {
-                Text = "펜/지우개 속성",
-                Location = new Point(10, currentY)
-            };
+            Label lblPen = new Label { Text = "펜/지우개 속성", Location = new Point(10, currentY) };
             panel1.Controls.Add(lblPen);
             currentY = lblPen.Bottom + spacing;
 
@@ -1319,24 +1460,16 @@ namespace photo
             panel1.Controls.Add(tbPenSize);
             currentY = tbPenSize.Bottom + spacing;
 
-            Label lblPenSize = new Label
-            {
-                Text = "굵기",
-                Location = new Point(10, currentY)
-            };
+            Label lblPenSize = new Label { Text = "굵기", Location = new Point(10, currentY) };
             panel1.Controls.Add(lblPenSize);
             currentY = lblPenSize.Bottom + spacing;
 
             // 6. 모자이크 속성
-            Label lblMosaic = new Label
-            {
-                Text = "모자이크 속성",
-                Location = new Point(10, currentY)
-            };
+            Label lblMosaic = new Label { Text = "모자이크 속성", Location = new Point(10, currentY) };
             panel1.Controls.Add(lblMosaic);
             currentY = lblMosaic.Bottom + spacing;
 
-            TrackBar tbMosaicSize = new TrackBar
+            tbMosaicSize = new TrackBar
             {
                 Minimum = 2,
                 Maximum = 50,
@@ -1348,13 +1481,20 @@ namespace photo
             panel1.Controls.Add(tbMosaicSize);
             currentY = tbMosaicSize.Bottom + spacing;
 
-            Label lblMosaicBlock = new Label
-            {
-                Text = "블록 크기",
-                Location = new Point(10, currentY)
-            };
+            Label lblMosaicBlock = new Label { Text = "블록 크기", Location = new Point(10, currentY) };
             panel1.Controls.Add(lblMosaicBlock);
+            currentY += 40;
+            // 7. 자르기 확정 버튼
+            Button btnConfirmCrop = new Button
+            {
+                Text = "자르기 확정",
+                Location = new Point(10, currentY),
+                Size = new Size(100, 30)
+            };
+            btnConfirmCrop.Click += BtnConfirmCrop_Click;
+            panel1.Controls.Add(btnConfirmCrop);
         }
+
 
 
         private void BtnColorSelect_Click(object sender, EventArgs e)
@@ -1425,7 +1565,269 @@ namespace photo
             action.Target.Image = (Bitmap)action.Before.Clone();
             action.Target.Invalidate();
         }
+        private float DistanceFromPointToSegment(Point pt, Point p1, Point p2)
+        {
+            float dx = p2.X - p1.X;
+            float dy = p2.Y - p1.Y;
 
+            if (dx == 0 && dy == 0)
+                return Distance(pt, p1);
+
+            float t = ((pt.X - p1.X) * dx + (pt.Y - p1.Y) * dy) / (dx * dx + dy * dy);
+            t = Math.Max(0, Math.Min(1, t));
+
+            float projX = p1.X + t * dx;
+            float projY = p1.Y + t * dy;
+
+            return Distance(pt, new Point((int)projX, (int)projY));
+        }
+
+        private float Distance(Point a, Point b)
+        {
+            float dx = a.X - b.X;
+            float dy = a.Y - b.Y;
+            return (float)Math.Sqrt(dx * dx + dy * dy);
+        }
+
+        /// <summary>
+        /// 프로젝트  poto속성에서 설정 수정해야함
+        /// </summary>
+        /// <param name="bmp"></param>
+        /// <param name="rect"></param>
+        /// <param name="blockSize"></param>
+        private unsafe void ApplyMosaic(Bitmap bmp, Rectangle rect, int blockSize)
+        {
+            // rect가 이미지 경계를 넘지 않도록 제한
+            rect.Intersect(new Rectangle(0, 0, bmp.Width, bmp.Height));
+            if (rect.IsEmpty) return;
+
+            BitmapData data = bmp.LockBits(
+                new Rectangle(0, 0, bmp.Width, bmp.Height),
+                ImageLockMode.ReadWrite,
+                PixelFormat.Format24bppRgb);  // 24비트 RGB (픽셀당 3바이트)
+
+            byte* ptrBase = (byte*)data.Scan0;
+            int stride = data.Stride;
+
+            for (int y = rect.Top; y < rect.Bottom; y += blockSize)
+            {
+                for (int x = rect.Left; x < rect.Right; x += blockSize)
+                {
+                    int r = 0, g = 0, b = 0, count = 0;
+
+                    // 평균 색 계산
+                    for (int j = 0; j < blockSize && (y + j) < rect.Bottom; j++)
+                    {
+                        if ((y + j) >= bmp.Height) continue;
+                        byte* row = ptrBase + (y + j) * stride;
+                        for (int i = 0; i < blockSize && (x + i) < rect.Right; i++)
+                        {
+                            if ((x + i) >= bmp.Width) continue;
+                            byte* pixel = row + (x + i) * 3;
+                            b += pixel[0];
+                            g += pixel[1];
+                            r += pixel[2];
+                            count++;
+                        }
+                    }
+
+                    if (count == 0) continue;
+
+                    byte avgR = (byte)(r / count);
+                    byte avgG = (byte)(g / count);
+                    byte avgB = (byte)(b / count);
+
+                    // 블록을 평균 색으로 채우기
+                    for (int j = 0; j < blockSize && (y + j) < rect.Bottom; j++)
+                    {
+                        if ((y + j) >= bmp.Height) continue;
+                        byte* row = ptrBase + (y + j) * stride;
+                        for (int i = 0; i < blockSize && (x + i) < rect.Right; i++)
+                        {
+                            if ((x + i) >= bmp.Width) continue;
+                            byte* pixel = row + (x + i) * 3;
+                            pixel[0] = avgB;
+                            pixel[1] = avgG;
+                            pixel[2] = avgR;
+                        }
+                    }
+                }
+            }
+
+            bmp.UnlockBits(data);
+        }
+
+
+
+        private Color GetAverageColor(Bitmap bmp, int x, int y, int w, int h)
+        {
+            long r = 0, g = 0, b = 0;
+            int count = 0;
+
+            for (int dy = 0; dy < h; dy++)
+            {
+                for (int dx = 0; dx < w; dx++)
+                {
+                    Color c = bmp.GetPixel(x + dx, y + dy);
+                    r += c.R;
+                    g += c.G;
+                    b += c.B;
+                    count++;
+                }
+            }
+
+            if (count == 0) return Color.Black;
+            return Color.FromArgb((int)(r / count), (int)(g / count), (int)(b / count));
+        }
+        private void ShowCroppedImage(Bitmap cropped)
+        {
+            PictureBox pbNew = new PictureBox
+            {
+                Image = cropped,
+                SizeMode = PictureBoxSizeMode.Zoom,
+                Width = 200,
+                Height = 200,
+                BorderStyle = BorderStyle.FixedSingle,
+                Location = new Point(10, this.Height - 250) // 임시 위치
+            };
+
+            this.Controls.Add(pbNew);
+            pbNew.BringToFront();
+        }
+        private void BtnConfirmCrop_Click(object sender, EventArgs e)
+        {
+            if (selectedImage == null || selectedImage.Image == null || cropRect.Width == 0 || cropRect.Height == 0)
+            {
+                MessageBox.Show("자를 이미지를 먼저 선택하고 드래그로 자를 영역을 지정하세요.");
+                return;
+            }
+
+            Bitmap rendered = new Bitmap(selectedImage.Width, selectedImage.Height);
+            selectedImage.DrawToBitmap(rendered, selectedImage.ClientRectangle);
+
+            Rectangle intersected = Rectangle.Intersect(cropRect, new Rectangle(Point.Empty, rendered.Size));
+            if (intersected.Width > 0 && intersected.Height > 0)
+            {
+                Bitmap cropped = rendered.Clone(intersected, rendered.PixelFormat);
+
+                PictureBox pbNew = new PictureBox
+                {
+                    Image = cropped,
+                    SizeMode = PictureBoxSizeMode.StretchImage,
+                    Size = new Size(cropped.Width, cropped.Height),
+                    Location = new Point(selectedImage.Right + 20, selectedImage.Top),
+                    BorderStyle = BorderStyle.FixedSingle
+                };
+
+                EnableDoubleBuffering(pbNew);
+
+                imageList.Add((pbNew, new Bitmap(cropped)));
+                imageTransparencyMap[pbNew] = 255;
+
+                // --- 그림 동작을 위한 이벤트 ---
+                pbNew.MouseDown += pictureBox_MouseDown;
+                pbNew.MouseMove += pictureBox_MouseMove;
+                pbNew.MouseUp += pictureBox_MouseUp;
+                pbNew.Paint += pictureBox_Paint;
+
+                // --- 이모티콘 드래그 동작을 위한 이벤트 ---
+                pbNew.AllowDrop = true;
+                pbNew.DragEnter += PictureBox_DragEnter;
+                pbNew.DragOver += PictureBox_DragOver;
+                pbNew.DragDrop += PictureBox_DragDrop;
+                pbNew.DragLeave += PictureBox_DragLeave;
+
+                var currentTab = tabControl1.SelectedTab;
+                currentTab.Controls.Add(pbNew);
+                pbNew.BringToFront();
+
+                selectedImage = pbNew;
+                selectedImages.Clear();
+                selectedImages.Add(pbNew);
+
+                textBox1.Text = pbNew.Width.ToString();
+                textBox2.Text = pbNew.Height.ToString();
+                tbTransparencyGlobal.Value = 255;
+
+                pbNew.Invalidate();
+            }
+        }
+        private void ApplyMosaicEffect(PictureBox pb, Rectangle rect, int mosaicSize)
+        {
+            if (pb.Image == null) return;
+
+            Bitmap bmp = (Bitmap)pb.Image;
+            Bitmap backup = (Bitmap)bmp.Clone();
+
+            // [1] 좌표 정규화 (드래그 반대로 한 경우 대비)
+            Rectangle normalizedRect = new Rectangle(
+                Math.Max(0, Math.Min(rect.Left, rect.Right)),
+                Math.Max(0, Math.Min(rect.Top, rect.Bottom)),
+                Math.Abs(rect.Width),
+                Math.Abs(rect.Height)
+            );
+
+            for (int y = normalizedRect.Top; y < normalizedRect.Bottom; y += mosaicSize)
+            {
+                for (int x = normalizedRect.Left; x < normalizedRect.Right; x += mosaicSize)
+                {
+                    int pixelX = Math.Min(x, bmp.Width - 1);
+                    int pixelY = Math.Min(y, bmp.Height - 1);
+                    Color pixelColor = bmp.GetPixel(pixelX, pixelY);
+
+                    for (int j = 0; j < mosaicSize && y + j < normalizedRect.Bottom && y + j < bmp.Height; j++)
+                    {
+                        for (int i = 0; i < mosaicSize && x + i < normalizedRect.Right && x + i < bmp.Width; i++)
+                        {
+                            int drawX = x + i;
+                            int drawY = y + j;
+                            if (drawX < bmp.Width && drawY < bmp.Height)
+                                bmp.SetPixel(drawX, drawY, pixelColor);
+                        }
+                    }
+                }
+            }
+
+            undoStack.Push(new EditAction(pb, backup, (Bitmap)bmp.Clone(), "Mosaic", normalizedRect));
+
+
+            // [3] 이미지 적용
+            pb.Image = bmp;
+            pb.Invalidate();
+        }
+
+        private Rectangle Enlarge(Rectangle rect, int margin)
+        {
+            return new Rectangle(
+                rect.X - margin,
+                rect.Y - margin,
+                rect.Width + margin * 2,
+                rect.Height + margin * 2
+            );
+        }
+
+        private void RestoreMosaicArea(PictureBox pb, EditAction action)
+        {
+            if (pb.Image is Bitmap current && action.Before is Bitmap before && action.AffectedArea.HasValue)
+            {
+                Rectangle area = action.AffectedArea.Value;
+
+                using (Graphics g = Graphics.FromImage(current))
+                {
+                    g.DrawImage(before, area, area, GraphicsUnit.Pixel);
+                }
+
+                pb.Invalidate();
+            }
+        }
+        private Rectangle NormalizeRectangle(Rectangle rect)
+        {
+            int x = Math.Min(rect.Left, rect.Right);
+            int y = Math.Min(rect.Top, rect.Bottom);
+            int width = Math.Abs(rect.Width);
+            int height = Math.Abs(rect.Height);
+            return new Rectangle(x, y, width, height);
+        }
         // 이문형 메소드
         //==============================================//==============================================//==============================================//==============================================
         //==============================================//==============================================//==============================================//==============================================
