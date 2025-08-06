@@ -1,7 +1,7 @@
 using System.Drawing.Drawing2D;
 using System.Reflection;
 using System.Windows.Forms;
-
+using System.Drawing.Imaging;
 namespace photo
 {
     public partial class Form1 : Form
@@ -62,6 +62,10 @@ namespace photo
         private const int handleSize = 10;
 
 
+
+
+        //문형 시작
+        Dictionary<PictureBox, int> imageAlphaMap = new Dictionary<PictureBox, int>();
         public Form1()
         {
             InitializeComponent();
@@ -737,42 +741,134 @@ namespace photo
                 dynamicPanels[i] = panel;
             }
 
-            // 2. 버튼 생성
-            //int buttonWidth = 40;
-            //int buttonHeight = 40;
-            //int spacing = 10;
-            //int startX = 15;
-            //int buttonStartY = 95;
-            //int columns = 2;
-            //int buttonCount = 10;
+            // 패널2번사용
 
-            //dynamicButtons = new Button[buttonCount];
+            // 패널2 UI 구성 (디자인 전용)
+            // 패널2 UI 구성 (디자인 전용)
+            Panel panel2 = dynamicPanels[1];
+            panel2.AutoScroll = true;
 
-            //for (int i = 0; i < buttonCount; i++)
-            //{
-            //    Button btn = new Button();
-            //    btn.Text = $"{i + 1}";
-            //    btn.Size = new Size(buttonWidth, buttonHeight);
+            int y = 10;
+            int padding = 15;
 
-            //    //
-            //    btn.BackColor = ColorTranslator.FromHtml("#FFF5F5");
-            //    btn.FlatStyle = FlatStyle.Flat;
+            // 이미지 투명도
+            Label lblTransparency = new Label { Text = "이미지 투명도", Location = new Point(10, y) };
+            panel2.Controls.Add(lblTransparency);
+            y += 35;
 
-            //    int col = i % columns;
-            //    int row = i / columns;
+            TrackBar tbTransparency = new TrackBar
+            {
+                Minimum = 0,
+                Maximum = 100,
+                TickFrequency = 10,
+                Value = 100,
+                Width = 200,
+                Location = new Point(10, y)
+            };
+            panel2.Controls.Add(tbTransparency);
+            tbTransparency.Scroll += TbTransparency_Scroll;
+            y += 65;
 
-            //    btn.Location = new Point(
-            //        startX + col * (buttonWidth + spacing),
-            //        buttonStartY + row * (buttonHeight + spacing));
+            // 색상 선택 버튼
+            Button btnColor = new Button
+            {
+                Text = "색상 선택",
+                Location = new Point(10, y),
+                Size = new Size(80, 30)
+            };
+            panel2.Controls.Add(btnColor);
 
-            //    btn.Tag = i;
-            //    btn.Click += Button_Click;
+            // RGB/Hex 미리보기
+            Panel colorPreview = new Panel
+            {
+                BackColor = Color.Black,
+                Size = new Size(40, 30),
+                Location = new Point(100, y)
+            };
+            panel2.Controls.Add(colorPreview);
 
-            //    //MakeRoundedButton(btn, 12);
+            Label lblRGB = new Label
+            {
+                Text = "RGB: 0, 0, 0\nHex: #000000",
+                Location = new Point(150, y),
+                AutoSize = true
+            };
+            panel2.Controls.Add(lblRGB);
+            y += 70;
 
-            //    this.Controls.Add(btn);
-            //    dynamicButtons[i] = btn;
-            //}
+            // 작업 모드 GroupBox
+            GroupBox gbModes = new GroupBox
+            {
+                Text = "작업 모드",
+                Location = new Point(10, y),
+                Size = new Size(240, 120)
+            };
+            string[] modes = { "이동", "스포이드", "펜", "지우개", "모자이크", "자르기", "삭제" };
+            for (int i = 0; i < modes.Length; i++)
+            {
+                RadioButton rb = new RadioButton
+                {
+                    Text = modes[i],
+                    Location = new Point(10 + (i % 3) * 80, 25 + (i / 3) * 30),
+                    AutoSize = true
+                };
+                gbModes.Controls.Add(rb);
+            }
+            panel2.Controls.Add(gbModes);
+            y += gbModes.Height + padding + 10;
+
+            // 되돌리기 버튼
+            Button btnUndo = new Button
+            {
+                Text = "되돌리기",
+                Location = new Point(10, y),
+                Size = new Size(120, 35)
+            };
+            panel2.Controls.Add(btnUndo);
+            y += 55;
+
+            // 펜/지우개 속성
+            Label lblPenSize = new Label { Text = "펜/지우개 속성", Location = new Point(10, y) };
+            panel2.Controls.Add(lblPenSize);
+            y += 30;
+
+            TrackBar tbPenSize = new TrackBar
+            {
+                Minimum = 1,
+                Maximum = 20,
+                TickFrequency = 1,
+                Value = 5,
+                Width = 200,
+                Location = new Point(10, y)
+            };
+            panel2.Controls.Add(tbPenSize);
+            y += 55;
+
+            Label lblPenLabel = new Label { Text = "굵기", Location = new Point(10, y) };
+            panel2.Controls.Add(lblPenLabel);
+            y += 35;
+
+            // 모자이크 속성
+            Label lblMosaic = new Label { Text = "모자이크 속성", Location = new Point(10, y) };
+            panel2.Controls.Add(lblMosaic);
+            y += 30;
+
+            TrackBar tbMosaicSize = new TrackBar
+            {
+                Minimum = 1,
+                Maximum = 50,
+                TickFrequency = 5,
+                Value = 10,
+                Width = 200,
+                Location = new Point(10, y)
+            };
+            panel2.Controls.Add(tbMosaicSize);
+            y += 55;
+
+            Label lblBlockSize = new Label { Text = "블록 크기", Location = new Point(10, y) };
+            panel2.Controls.Add(lblBlockSize);
+
+
 
             // 3. 이모지 PictureBox 추가 (패널 8번)
             Panel panel8 = dynamicPanels[7];
@@ -837,6 +933,36 @@ namespace photo
                 currentVisiblePanel.Invalidate();
             }
         }
+        // 문형 메소드
+        private void TbTransparency_Scroll(object sender, EventArgs e)
+        {
+            if (selectedImage == null || selectedImage.Tag is not Bitmap original)
+                return;
+
+            int alpha = ((TrackBar)sender).Value;
+            imageAlphaMap[selectedImage] = alpha;
+
+            // 기존 크기를 유지하며 투명도 적용
+            Size fixedSize = selectedImage.Size;
+
+            Bitmap transparent = new Bitmap(original.Width, original.Height);
+            using (Graphics g = Graphics.FromImage(transparent))
+            {
+                ColorMatrix matrix = new ColorMatrix { Matrix33 = alpha / 100f };
+                ImageAttributes attr = new ImageAttributes();
+                attr.SetColorMatrix(matrix, ColorMatrixFlag.Default, ColorAdjustType.Bitmap);
+                g.DrawImage(original, new Rectangle(0, 0, original.Width, original.Height),
+                    0, 0, original.Width, original.Height, GraphicsUnit.Pixel, attr);
+            }
+
+            selectedImage.Image?.Dispose();
+            selectedImage.Image = transparent;
+            selectedImage.Size = fixedSize;
+            selectedImage.Invalidate();
+        }
+
+
+
 
         // 모든 동적 버튼의 클릭 이벤트를 처리하는 단일 핸들러
         private void Button_Click(object sender, EventArgs e)
@@ -906,17 +1032,24 @@ namespace photo
         {
             if (sender is PictureBox pb)
             {
-                // 기존 선택 해제
                 if (selectedImage != null && selectedImage != pb)
-                {
-                    selectedImage.Invalidate(); // 기존 테두리 제거
-                }
+                    selectedImage.Invalidate();
 
                 selectedImage = pb;
                 showSelectionBorderForImage = true;
-                pb.Invalidate(); // 테두리 그리기 위해 다시 그리기
+                pb.Invalidate();
+
+                // 트랙바에 알파값 반영
+                if (dynamicPanels[1].Controls.OfType<TrackBar>().FirstOrDefault() is TrackBar tb)
+                {
+                    if (imageAlphaMap.TryGetValue(pb, out int savedAlpha))
+                        tb.Value = savedAlpha;
+                    else
+                        tb.Value = 100; // 디폴트
+                }
             }
         }
+        
         private void Image_Paint(object sender, PaintEventArgs e)
         {
             if (sender is PictureBox pb && pb == selectedImage && showSelectionBorderForImage)
@@ -1128,6 +1261,29 @@ namespace photo
             else
             {
                 // 다른 패널이 열려 있으면 닫고, 이모지 패널 열기
+                foreach (Panel panel in dynamicPanels)
+                {
+                    panel.Visible = false;
+                }
+
+                targetPanel.Visible = true;
+                targetPanel.BringToFront();
+                currentVisiblePanel = targetPanel;
+                targetPanel.Invalidate();
+            }
+        }
+
+        private void button4_Click_1(object sender, EventArgs e)
+        {
+            Panel targetPanel = dynamicPanels[1]; // 패널2번
+
+            if (currentVisiblePanel == targetPanel)
+            {
+                targetPanel.Visible = false;
+                currentVisiblePanel = null;
+            }
+            else
+            {
                 foreach (Panel panel in dynamicPanels)
                 {
                     panel.Visible = false;

@@ -281,6 +281,7 @@
             button4.Size = new Size(30, 30);
             button4.TabIndex = 10;
             button4.UseVisualStyleBackColor = false;
+            button4.Click += button4_Click_1;
             // 
             // button3
             // 
