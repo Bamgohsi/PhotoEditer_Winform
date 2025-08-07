@@ -17,6 +17,8 @@ namespace photo
 
     public partial class Form1 : Form
     {
+        private ToolTip toolTip1; // 이모지 미리보기 툴팁
+        
         private ContextMenuStrip imageContextMenu;
         private ToolStripMenuItem menuCopy;
         private ToolStripMenuItem menuPaste;
@@ -75,7 +77,7 @@ namespace photo
         // private bool showSelectionBorder = false;
 
         // UI 요소 배열
-        private Button[] dynamicButtons;
+
         private Panel[] dynamicPanels;
         private Panel currentVisiblePanel = null;
 
@@ -143,13 +145,49 @@ namespace photo
         private bool isMosaicing = false;          // 모자이크 드래그 중인지 여부
         private Point mosaicStartPoint;            // 모자이크 드래그 시작 위치
         private Rectangle mosaicRect;              // 모자이크 드래그된 사각형
-
+       
         // 펜 그리기 데이터 저장용
         private Dictionary<PictureBox, List<PenStroke>> penStrokesMap = new Dictionary<PictureBox, List<PenStroke>>();
         private PenStroke currentStroke = null; // 현재 그리고 있는 선
 
         private int EraserRadius => tbPenSize?.Value ?? 10; // 지우개 크기는 펜 크기와 공유
+        private void TogglePanelVisibility(int index)
+        {
+            if (index >= dynamicPanels.Length) return;
 
+            Panel targetPanel = dynamicPanels[index];
+
+            // ★★★★★ 변경된 부분 ★★★★★
+            // 보여주려는 패널이 이미 화면에 있다면,
+            // 아무것도 하지 않고 그냥 함수를 종료합니다.
+            if (currentVisiblePanel == targetPanel)
+            {
+                return;
+            }
+            // ★★★★★★★★★★★★★★★★★★★★
+
+            // 다른 패널로 전환할 때, 기존에 필터 패널이 열려있었다면 변경사항 복원
+            if (currentVisiblePanel == dynamicPanels[1] && selectedImage != null && _initialImage != null && !filterApplied)
+            {
+                selectedImage.Image = new Bitmap(_initialImage);
+                selectedImage.Invalidate();
+            }
+
+            // 현재 열려있는 패널이 있다면 닫기
+            if (currentVisiblePanel != null)
+                currentVisiblePanel.Visible = false;
+
+            // 새로 선택한 패널 열기
+            currentVisiblePanel = targetPanel;
+            currentVisiblePanel.Visible = true;
+
+            // 필터 패널(인덱스 1)을 열 때, 현재 이미지 상태를 백업
+            if (index == 1 && selectedImage != null)
+            {
+                filterApplied = false;
+                UpdateEditControlsFromSelectedImage();
+            }
+        }
         public Form1()
         {
             InitializeComponent();
@@ -178,6 +216,32 @@ namespace photo
 
             this.KeyPreview = true;
             this.KeyDown += Form1_KeyDown;
+            toolTip1 = new ToolTip(); // 전역 ToolTip 인스턴스 생성
+
+            // (선택) 표시 설정
+            toolTip1.InitialDelay = 300;
+            toolTip1.ReshowDelay = 100;
+            toolTip1.AutoPopDelay = 5000;
+            toolTip1.ShowAlways = true;
+            ToolTip toolTip = new ToolTip();
+            toolTip.SetToolTip(btn_NewFile, "새로만들기(Ctrl+N)");
+            toolTip.SetToolTip(btn_Open, "파일 열기(Ctrl+O)");
+            toolTip.SetToolTip(btn_Save, "파일 저장(Ctrl+S)");
+            toolTip.SetToolTip(btnNewTabPage, "탭 페이지 추가");
+            toolTip.SetToolTip(btnDltTabPage, "탭 페이지 삭제");
+            toolTip.SetToolTip(btn_zoomin, "확대");
+            toolTip.SetToolTip(btn_zoomout, "축소");
+            toolTip.SetToolTip(button1, "왼쪽으로 90º회전");
+            toolTip.SetToolTip(button2, "오른쪽으로 90º회전");
+            toolTip.SetToolTip(button3, "좌우반전");
+            toolTip.SetToolTip(button4, "자르기");
+            toolTip.SetToolTip(button5, "펜");
+            toolTip.SetToolTip(button6, "지우개");
+            toolTip.SetToolTip(button7, "스포이드");
+            toolTip.SetToolTip(button13, "이모티콘");
+            toolTip.SetToolTip(button8, "모자이크");
+            toolTip.SetToolTip(button9, "모자이크 해제");
+            toolTip.SetToolTip(button10, "필터");
         }
 
         // 텍스트 박스에서 엔터 키 누르면 다음 컨트롤로 포커스 이동 (크기 변경 적용)
@@ -219,7 +283,7 @@ namespace photo
                 }
             }
 
-            int totalLeft = LeftMargin + LeftPanelWidth + GapBetweenPictureBoxAndPanel;
+            int totalLeft = LeftMargin; //+ LeftPanelWidth + GapBetweenPictureBoxAndPanel;
             tabControl1.Location = new Point(totalLeft, TopMargin);
             tabControl1.Size = new Size(
                 this.ClientSize.Width - totalLeft - PanelWidth - PanelRightMargin - 15,
@@ -1151,7 +1215,8 @@ namespace photo
                     AutoSize = true,
                     Checked = (modes[index] == "이동")
                 };
-                rb.CheckedChanged += (s, e) => {
+                rb.CheckedChanged += (s, e) =>
+                {
                     if (rb.Checked)
                     {
                         currentWorkMode = rb.Text;
@@ -1309,31 +1374,7 @@ namespace photo
                 this.Controls.Add(panel);
             }
 
-            // 2. 버튼 생성 (왼쪽 사이드바)
-            int buttonWidth = 40;
-            int buttonHeight = 40;
-            int spacing = 10;
-            int startX = 15;
-            int buttonStartY = 95;
-            int columns = 2;
-            int buttonCount = 10;
-            dynamicButtons = new Button[buttonCount];
 
-            for (int i = 0; i < buttonCount; i++)
-            {
-                Button btn = new Button();
-                btn.Text = $"{i + 1}";
-                btn.Size = new Size(buttonWidth, buttonHeight);
-                int col = i % columns;
-                int row = i / columns;
-                btn.Location = new Point(
-                    startX + col * (buttonWidth + spacing),
-                    buttonStartY + row * (buttonHeight + spacing));
-                btn.Tag = i;
-                btn.Click += Button_Click;
-                this.Controls.Add(btn);
-                dynamicButtons[i] = btn;
-            }
 
             // 3. 기본 패널 보이게 설정 (첫 번째 패널)
             if (dynamicPanels.Length > 0)
@@ -1506,57 +1547,7 @@ namespace photo
             }
         }
 
-        // 모든 동적 버튼의 클릭 이벤트를 처리하는 단일 핸들러 (패널 가시성 토글)
-        private void Button_Click(object sender, EventArgs e)
-        {
-            Button clickedButton = sender as Button;
-            if (clickedButton != null)
-            {
-                int index = (int)clickedButton.Tag;
-                if (index >= dynamicPanels.Length) return;
 
-                Panel targetPanel = dynamicPanels[index];
-
-                //  패널이 이미 열려있는 상태에서 같은 버튼을 다시 누른 경우 → 닫기
-                if (currentVisiblePanel == targetPanel)
-                {
-                    //  필터 패널(1번)을 닫을 때 '적용하기' 안 눌렀으면 복원
-                    if (index == 1 && selectedImage != null && _initialImage != null && !filterApplied)
-                    {
-                        selectedImage.Image = new Bitmap(_initialImage);
-                        selectedImage.Invalidate();
-                    }
-
-                    if (currentVisiblePanel != null)
-                        currentVisiblePanel.Visible = false;
-
-                    currentVisiblePanel = null;
-                    return;
-                }
-
-                // 다른 패널로 전환하는 경우 → 기존 필터 패널이 열려있었으면 복원
-                if (currentVisiblePanel == dynamicPanels[1] && selectedImage != null && _initialImage != null && !filterApplied)
-                {
-                    selectedImage.Image = new Bitmap(_initialImage);
-                    selectedImage.Invalidate();
-                }
-
-                // 기존 패널 닫기 (null 체크 필수)
-                if (currentVisiblePanel != null)
-                    currentVisiblePanel.Visible = false;
-
-                // 새 패널 열기
-                currentVisiblePanel = targetPanel;
-                currentVisiblePanel.Visible = true;
-
-                // 필터 패널 진입 시 초기 백업 및 적용 여부 초기화
-                if (index == 1 && selectedImage != null)
-                {
-                    filterApplied = false; // ← 적용 여부 초기화
-                    UpdateEditControlsFromSelectedImage(); // ← 현재 상태 백업
-                }
-            }
-        }
 
         // 패널 그리기 이벤트 (테두리)
         private void Panel_Paint(object sender, PaintEventArgs e)
@@ -2932,6 +2923,45 @@ namespace photo
             );
         }
 
+        private void button5_Click(object sender, EventArgs e)
+        {
+            TogglePanelVisibility(0);
+        }
+
+        private void button6_Click(object sender, EventArgs e)
+        {
+            TogglePanelVisibility(0);
+        }
+
+        private void button7_Click(object sender, EventArgs e)
+        {
+            TogglePanelVisibility(0);
+        }
+
+        private void button13_Click(object sender, EventArgs e)
+        {
+            TogglePanelVisibility(7);
+        }
+
+        private void button8_Click(object sender, EventArgs e)
+        {
+            TogglePanelVisibility(0);
+        }
+
+        private void button9_Click(object sender, EventArgs e)
+        {
+            TogglePanelVisibility(0);
+        }
+
+        private void button10_Click(object sender, EventArgs e)
+        {
+            TogglePanelVisibility(1);
+        }
+
+        private void button4_Click(object sender, EventArgs e)
+        {
+            TogglePanelVisibility(0);
+        }
     }
 
     // Form1 클래스 바깥에 추가

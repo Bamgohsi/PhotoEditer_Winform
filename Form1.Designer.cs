@@ -58,8 +58,8 @@
             label1 = new Label();
             button2 = new Button();
             button1 = new Button();
-            button12 = new Button();
-            button11 = new Button();
+            btn_zoomout = new Button();
+            btn_zoomin = new Button();
             btnDltTabPage = new Button();
             btnNewTabPage = new Button();
             btn_Save = new Button();
@@ -167,8 +167,8 @@
             groupBox2.Controls.Add(label1);
             groupBox2.Controls.Add(button2);
             groupBox2.Controls.Add(button1);
-            groupBox2.Controls.Add(button12);
-            groupBox2.Controls.Add(button11);
+            groupBox2.Controls.Add(btn_zoomout);
+            groupBox2.Controls.Add(btn_zoomin);
             groupBox2.Controls.Add(btnDltTabPage);
             groupBox2.Controls.Add(btnNewTabPage);
             groupBox2.Controls.Add(btn_Save);
@@ -210,6 +210,7 @@
             button13.Size = new Size(35, 35);
             button13.TabIndex = 7;
             button13.UseVisualStyleBackColor = false;
+            button13.Click += button13_Click;
             // 
             // textBox4
             // 
@@ -232,6 +233,7 @@
             button10.Size = new Size(35, 35);
             button10.TabIndex = 7;
             button10.UseVisualStyleBackColor = false;
+            button10.Click += button10_Click;
             // 
             // label4
             // 
@@ -254,6 +256,7 @@
             button9.Size = new Size(35, 35);
             button9.TabIndex = 7;
             button9.UseVisualStyleBackColor = false;
+            button9.Click += button9_Click;
             // 
             // label3
             // 
@@ -276,6 +279,7 @@
             button8.Size = new Size(35, 35);
             button8.TabIndex = 7;
             button8.UseVisualStyleBackColor = false;
+            button8.Click += button8_Click;
             // 
             // button7
             // 
@@ -289,6 +293,7 @@
             button7.Size = new Size(35, 35);
             button7.TabIndex = 7;
             button7.UseVisualStyleBackColor = false;
+            button7.Click += button7_Click;
             // 
             // button6
             // 
@@ -302,6 +307,7 @@
             button6.Size = new Size(35, 35);
             button6.TabIndex = 7;
             button6.UseVisualStyleBackColor = false;
+            button6.Click += button6_Click;
             // 
             // button5
             // 
@@ -315,6 +321,7 @@
             button5.Size = new Size(35, 35);
             button5.TabIndex = 7;
             button5.UseVisualStyleBackColor = false;
+            button5.Click += button5_Click;
             // 
             // button4
             // 
@@ -328,6 +335,7 @@
             button4.Size = new Size(35, 35);
             button4.TabIndex = 7;
             button4.UseVisualStyleBackColor = false;
+            button4.Click += button4_Click;
             // 
             // button3
             // 
@@ -407,31 +415,31 @@
             button1.UseVisualStyleBackColor = false;
             button1.Click += btn_leftdegreeClick;
             // 
-            // button12
+            // btn_zoomout
             // 
-            button12.BackgroundImage = Properties.Resources.m_5;
-            button12.BackgroundImageLayout = ImageLayout.Stretch;
-            button12.FlatAppearance.BorderSize = 0;
-            button12.FlatStyle = FlatStyle.Flat;
-            button12.Location = new Point(385, 17);
-            button12.Name = "button12";
-            button12.Size = new Size(35, 35);
-            button12.TabIndex = 2;
-            button12.UseVisualStyleBackColor = true;
-            button12.Click += button12_Click;
+            btn_zoomout.BackgroundImage = Properties.Resources.m_5;
+            btn_zoomout.BackgroundImageLayout = ImageLayout.Stretch;
+            btn_zoomout.FlatAppearance.BorderSize = 0;
+            btn_zoomout.FlatStyle = FlatStyle.Flat;
+            btn_zoomout.Location = new Point(385, 17);
+            btn_zoomout.Name = "btn_zoomout";
+            btn_zoomout.Size = new Size(35, 35);
+            btn_zoomout.TabIndex = 2;
+            btn_zoomout.UseVisualStyleBackColor = true;
+            btn_zoomout.Click += button12_Click;
             // 
-            // button11
+            // btn_zoomin
             // 
-            button11.BackgroundImage = Properties.Resources.m_7;
-            button11.BackgroundImageLayout = ImageLayout.Stretch;
-            button11.FlatAppearance.BorderSize = 0;
-            button11.FlatStyle = FlatStyle.Flat;
-            button11.Location = new Point(324, 17);
-            button11.Name = "button11";
-            button11.Size = new Size(35, 35);
-            button11.TabIndex = 2;
-            button11.UseVisualStyleBackColor = true;
-            button11.Click += button11_Click;
+            btn_zoomin.BackgroundImage = Properties.Resources.m_7;
+            btn_zoomin.BackgroundImageLayout = ImageLayout.Stretch;
+            btn_zoomin.FlatAppearance.BorderSize = 0;
+            btn_zoomin.FlatStyle = FlatStyle.Flat;
+            btn_zoomin.Location = new Point(324, 17);
+            btn_zoomin.Name = "btn_zoomin";
+            btn_zoomin.Size = new Size(35, 35);
+            btn_zoomin.TabIndex = 2;
+            btn_zoomin.UseVisualStyleBackColor = true;
+            btn_zoomin.Click += button11_Click;
             // 
             // btnDltTabPage
             // 
@@ -539,8 +547,8 @@
         private Button btn_NewFile;
         private Button btnNewTabPage;
         private Button btnDltTabPage;
-        private Button button12;
-        private Button button11;
+        private Button btn_zoomout;
+        private Button btn_zoomin;
         private Button button2;
         private Button button1;
         private TextBox textBox2;
