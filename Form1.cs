@@ -113,6 +113,43 @@ namespace photo
         private bool isTextChanging = false; // 현수 - TextBox.TextChanged와 TrackBar.Scroll 무한루프 방지용
         private bool filterApplied = false; // 필터 적용 여부 추적
 
+        private string currentWorkMode = "이동"; // 기본 모드를 '이동'으로 설정
+
+        // 자르기 관련
+        private bool isCropping = false;
+        private Point cropStartPoint;
+        private Rectangle cropRect;
+
+        // 모자이크/펜 등 편집 원본 저장용
+        private Dictionary<PictureBox, Bitmap> originalImages = new();
+
+        // UI 컨트롤
+        private TrackBar tbMosaicSize;
+        private Panel panelColorSelected;   // "색상 선택" 미리보기
+        private Panel panelColorPicked;     // 스포이드로 선택된 색상 미리보기
+        private Label lblRGB;               // RGB + Hex 표시
+        private Dictionary<PictureBox, int> imageTransparencyMap = new Dictionary<PictureBox, int>();
+        private TrackBar tbTransparencyGlobal;
+        private TrackBar tbPenSize;
+        private TrackBar tbEraserSize; // 지우개는 별도 트랙바가 필요할 수 있으나, 우선 tbPenSize 공유
+
+        // 실행 취소/다시 실행 (Undo/Redo) 스택 (모자이크, 펜 등에 사용)
+        private Stack<EditAction> undoStack = new Stack<EditAction>();
+        private Stack<EditAction> redoStack = new Stack<EditAction>();
+
+        // 그리기/모자이크 상태 관련
+        private bool isDrawing = false;           // 펜/지우개 드래그 중인지 여부
+        private Point lastDrawPoint = Point.Empty; // 마지막 그렸던 점 (현재 코드에서는 사용되지 않음)
+        private bool isMosaicing = false;          // 모자이크 드래그 중인지 여부
+        private Point mosaicStartPoint;            // 모자이크 드래그 시작 위치
+        private Rectangle mosaicRect;              // 모자이크 드래그된 사각형
+
+        // 펜 그리기 데이터 저장용
+        private Dictionary<PictureBox, List<PenStroke>> penStrokesMap = new Dictionary<PictureBox, List<PenStroke>>();
+        private PenStroke currentStroke = null; // 현재 그리고 있는 선
+
+        private int EraserRadius => tbPenSize?.Value ?? 10; // 지우개 크기는 펜 크기와 공유
+
         public Form1()
         {
             InitializeComponent();
@@ -293,93 +330,149 @@ namespace photo
         // PictureBox 마우스 다운 이벤트 핸들러 (선택, 드래그, 리사이즈 시작)
         private void pictureBox_MouseDown(object sender, MouseEventArgs e)
         {
-            if (sender is PictureBox pb && pb.Image != null && e.Button == MouseButtons.Left)
+            if (sender is not PictureBox pb || pb.Image == null) return;
+
+            // 우클릭은 항상 컨텍스트 메뉴를 위해 사용되므로, 좌클릭일 때만 아래 로직 수행
+            if (e.Button != MouseButtons.Left) return;
+
+            // ======== 작업 모드에 따른 기능 분기 ========
+            if (currentWorkMode == "펜")
             {
-                // --- 이모티콘 선택 해제 로직 (추가) ---
-                bool emojiClicked = false;
-                // 클릭된 위치에 자식 컨트롤(이모티콘)이 있는지 확인
+                isDrawing = true;
+                currentStroke = new PenStroke
+                {
+                    StrokeColor = panelColorSelected.BackColor,
+                    StrokeWidth = tbPenSize.Value
+                };
+                currentStroke.Points.Add(e.Location);
+                if (!penStrokesMap.ContainsKey(pb)) penStrokesMap[pb] = new List<PenStroke>();
+                pb.Cursor = Cursors.Cross;
+                return; // "펜" 작업 후 다른 작업(이동 등)을 막기 위해 return
+            }
+            if (currentWorkMode == "지우개")
+            {
+                isDrawing = true;
+                pb.Cursor = Cursors.Cross;
+                // 실제 지우는 로직은 MouseMove에서 처리
+                return; // "지우개" 작업 후 return
+            }
+            if (currentWorkMode == "모자이크")
+            {
+                mosaicStartPoint = e.Location;
+                isMosaicing = true;
+                originalImages[pb] = new Bitmap(pb.Image); // 미리보기를 위해 원본 백업
+                return; // "모자이크" 작업 후 return
+            }
+            if (currentWorkMode == "스포이드")
+            {
+                Bitmap bmp = pb.Image as Bitmap;
+                if (bmp != null && e.X >= 0 && e.Y >= 0 && e.X < bmp.Width && e.Y < bmp.Height)
+                {
+                    Color picked = bmp.GetPixel(e.X, e.Y);
+                    panelColorPicked.BackColor = picked;
+                    panelColorSelected.BackColor = picked;
+                    lblRGB.Text = $"RGB: {picked.R}, {picked.G}, {picked.B}\nHex: #{picked.R:X2}{picked.G:X2}{picked.B:X2}";
+                }
+                return; // "스포이드" 작업 후 return
+            }
+            if (currentWorkMode == "자르기")
+            {
+                isCropping = true;
+                cropStartPoint = e.Location;
+                pb.Cursor = Cursors.Cross;
+                return; // "자르기" 작업 후 return
+            }
+            if (currentWorkMode == "삭제")
+            {
+                Point clickPoint = e.Location;
+                var targetAction = undoStack
+                    .Where(a => a.ActionType == "Mosaic" && a.Target == pb &&
+                                a.AffectedArea.HasValue && Enlarge(a.AffectedArea.Value, 10).Contains(clickPoint))
+                    .LastOrDefault();
+
+                if (targetAction != null)
+                {
+                    RestoreMosaicArea(pb, targetAction);
+                    undoStack = new Stack<EditAction>(undoStack.Where(a => a != targetAction));
+                }
+                return; // "삭제" 작업 후 return
+            }
+
+            // "이동" 모드일 때만 아래 로직이 실행됩니다.
+            bool emojiClicked = false;
+            foreach (Control child in pb.Controls)
+            {
+                if (child is PictureBox && child.Bounds.Contains(e.Location))
+                {
+                    emojiClicked = true;
+                    break;
+                }
+            }
+            if (!emojiClicked)
+            {
                 foreach (Control child in pb.Controls)
                 {
-                    if (child is PictureBox && child.Bounds.Contains(e.Location))
+                    if (child is PictureBox emoji)
                     {
-                        emojiClicked = true;
-                        break;
+                        emoji.Tag = null;
+                        emoji.Invalidate();
                     }
                 }
+                selectedEmoji = null;
+            }
 
-                // 이모티콘이 아닌 배경을 클릭했다면, 모든 자식 이모티콘의 선택을 해제
-                if (!emojiClicked)
+            bool isCtrlPressed = (Control.ModifierKeys & Keys.Control) == Keys.Control;
+            if (isCtrlPressed)
+            {
+                if (selectedImages.Contains(pb)) { selectedImages.Remove(pb); selectedImage = selectedImages.LastOrDefault(); }
+                else { selectedImages.Add(pb); selectedImage = pb; }
+            }
+            else
+            {
+                if (!selectedImages.Contains(pb))
                 {
-                    foreach (Control child in pb.Controls)
-                    {
-                        if (child is PictureBox emoji)
-                        {
-                            emoji.Tag = null; // 선택 태그 제거
-                            emoji.Invalidate(); // 다시 그려서 테두리 없애기
-                        }
-                    }
-                    selectedEmoji = null; // 전역 선택 변수도 초기화
+                    foreach (var item in selectedImages) { item.Invalidate(); }
+                    selectedImages.Clear();
                 }
-                // --- 여기까지 추가 ---
+                if (!selectedImages.Contains(pb)) { selectedImages.Add(pb); }
+                selectedImage = pb;
+            }
 
-                bool isCtrlPressed = (Control.ModifierKeys & Keys.Control) == Keys.Control;
+            if (selectedImage != null)
+            {
+                textBox1.Text = selectedImage.Width.ToString();
+                textBox2.Text = selectedImage.Height.ToString();
+                textBox3.Text = selectedImage.Left.ToString();
+                textBox4.Text = selectedImage.Top.ToString();
+                UpdateEditControlsFromSelectedImage();
+                if (imageTransparencyMap.TryGetValue(selectedImage, out int alpha)) { tbTransparencyGlobal.Value = alpha; }
+                else { tbTransparencyGlobal.Value = 255; imageTransparencyMap[selectedImage] = 255; }
+            }
 
-                if (isCtrlPressed) // Ctrl 키 누른 상태에서 클릭 시 다중 선택
-                {
-                    if (selectedImages.Contains(pb))
-                    {
-                        selectedImages.Remove(pb);
-                        selectedImage = selectedImages.LastOrDefault();
-                    }
-                    else
-                    {
-                        selectedImages.Add(pb);
-                        selectedImage = pb;
-                    }
-                }
-                else // Ctrl 키 없이 클릭 시 단일 선택
-                {
-                    if (!selectedImages.Contains(pb))
-                    {
-                        foreach (var item in selectedImages) { item.Invalidate(); }
-                        selectedImages.Clear();
-                    }
-                    if (!selectedImages.Contains(pb))
-                    {
-                        selectedImages.Add(pb);
-                    }
-                    selectedImage = pb;
-                }
+            foreach (var item in this.Controls.OfType<PictureBox>()) { item.Invalidate(); }
+            if (tabControl1.SelectedTab != null)
+            {
+                foreach (var item in tabControl1.SelectedTab.Controls.OfType<PictureBox>()) { item.Invalidate(); }
+            }
 
-                if (selectedImage != null)
-                {
-                    textBox1.Text = selectedImage.Width.ToString();
-                    textBox2.Text = selectedImage.Height.ToString();
-                    textBox3.Text = selectedImage.Left.ToString();
-                    textBox4.Text = selectedImage.Top.ToString();
-                    UpdateEditControlsFromSelectedImage();
-                }
 
-                foreach (var item in selectedImages) { item.Invalidate(); }
-
-                if (!string.IsNullOrEmpty(resizeDirection) && !emojiClicked) // 이모티콘 클릭 시에는 리사이즈/드래그 방지
+            if (!string.IsNullOrEmpty(resizeDirection) && !emojiClicked)
+            {
+                isResizing = true;
+                isDragging = false;
+                resizeStartPoint = e.Location;
+                resizeStartSize = pb.Size;
+                resizeStartLocation = pb.Location;
+            }
+            else if (!emojiClicked)
+            {
+                isDragging = true;
+                isResizing = false;
+                dragStartPositions.Clear();
+                dragStartMousePosition = pb.Parent.PointToClient(MousePosition);
+                foreach (var selectedPb in selectedImages)
                 {
-                    isResizing = true;
-                    isDragging = false;
-                    resizeStartPoint = e.Location;
-                    resizeStartSize = pb.Size;
-                    resizeStartLocation = pb.Location;
-                }
-                else if (!emojiClicked) // 이모티콘 클릭 시에는 리사이즈/드래그 방지
-                {
-                    isDragging = true;
-                    isResizing = false;
-                    dragStartPositions.Clear();
-                    dragStartMousePosition = pb.Parent.PointToClient(MousePosition);
-                    foreach (var selectedPb in selectedImages)
-                    {
-                        dragStartPositions.Add(selectedPb, selectedPb.Location);
-                    }
+                    dragStartPositions.Add(selectedPb, selectedPb.Location);
                 }
             }
         }
@@ -387,65 +480,89 @@ namespace photo
         // PictureBox 마우스 이동 이벤트 핸들러 (드래그, 리사이즈 중)
         private void pictureBox_MouseMove(object sender, MouseEventArgs e)
         {
-            PictureBox pb = sender as PictureBox;
-            if (pb == null) return;
+            if (sender is not PictureBox pb || pb.Image == null) return;
 
-            if (isResizing) // 리사이즈 중일 때
+            // ======== 작업 모드에 따른 기능 분기 ========
+            if (currentWorkMode == "펜" && isDrawing && currentStroke != null)
             {
-                Point mousePosInParent = pb.Parent.PointToClient(MousePosition); // 부모 컨트롤 기준 마우스 위치
+                currentStroke.Points.Add(e.Location);
+                pb.Invalidate();
+                return;
+            }
+            if (currentWorkMode == "지우개" && isDrawing)
+            {
+                if (penStrokesMap.TryGetValue(pb, out var strokes))
+                {
+                    var toRemove = strokes.Where(stroke =>
+                        stroke.Points.Any(p => Distance(p, e.Location) < EraserRadius)
+                    ).ToList();
 
+                    if (toRemove.Any())
+                    {
+                        foreach (var stroke in toRemove) strokes.Remove(stroke);
+                        pb.Invalidate();
+                    }
+                }
+                return;
+            }
+            if (currentWorkMode == "모자이크" && isMosaicing)
+            {
+                Point mosaicEndPoint = e.Location;
+                mosaicRect = new Rectangle(
+                    Math.Min(mosaicStartPoint.X, mosaicEndPoint.X),
+                    Math.Min(mosaicStartPoint.Y, mosaicEndPoint.Y),
+                    Math.Abs(mosaicStartPoint.X - mosaicEndPoint.X),
+                    Math.Abs(mosaicStartPoint.Y - mosaicEndPoint.Y)
+                );
+                pb.Image?.Dispose();
+                pb.Image = ApplyMosaicToPreview(originalImages[pb], mosaicRect, tbMosaicSize.Value);
+                return;
+            }
+            if (currentWorkMode == "자르기" && isCropping)
+            {
+                Point cropEnd = e.Location;
+                cropRect = new Rectangle(
+                    Math.Min(cropStartPoint.X, cropEnd.X),
+                    Math.Min(cropStartPoint.Y, cropEnd.Y),
+                    Math.Abs(cropStartPoint.X - cropEnd.X),
+                    Math.Abs(cropStartPoint.Y - cropEnd.Y)
+                );
+                pb.Invalidate();
+                return;
+            }
+            if (currentWorkMode == "스포이드")
+            {
+                pb.Cursor = Cursors.Cross;
+                return;
+            }
+
+            // "이동" 모드일 때만 아래 로직이 실행됩니다.
+            if (isResizing)
+            {
+                Point mousePosInParent = pb.Parent.PointToClient(MousePosition);
                 int fixedRight = resizeStartLocation.X + resizeStartSize.Width;
                 int fixedBottom = resizeStartLocation.Y + resizeStartSize.Height;
                 int fixedLeft = resizeStartLocation.X;
                 int fixedTop = resizeStartLocation.Y;
+                int newWidth = pb.Width, newHeight = pb.Height, newLeft = pb.Left, newTop = pb.Top;
 
-                // 새로운 크기 및 위치 계산
-                int newWidth = pb.Width;
-                int newHeight = pb.Height;
-                int newLeft = pb.Left;
-                int newTop = pb.Top;
+                if (resizeDirection.Contains("Right")) newWidth = Math.Max(20, mousePosInParent.X - fixedLeft);
+                if (resizeDirection.Contains("Left")) { newWidth = Math.Max(20, fixedRight - mousePosInParent.X); newLeft = fixedRight - newWidth; }
+                if (resizeDirection.Contains("Bottom")) newHeight = Math.Max(20, mousePosInParent.Y - fixedTop);
+                if (resizeDirection.Contains("Top")) { newHeight = Math.Max(20, fixedBottom - mousePosInParent.Y); newTop = fixedBottom - newHeight; }
 
-                if (resizeDirection.Contains("Right"))
-                {
-                    newWidth = Math.Max(20, mousePosInParent.X - fixedLeft);
-                }
-                if (resizeDirection.Contains("Left"))
-                {
-                    newWidth = Math.Max(20, fixedRight - mousePosInParent.X);
-                    newLeft = fixedRight - newWidth;
-                }
-                if (resizeDirection.Contains("Bottom"))
-                {
-                    newHeight = Math.Max(20, mousePosInParent.Y - fixedTop);
-                }
-                if (resizeDirection.Contains("Top"))
-                {
-                    newHeight = Math.Max(20, fixedBottom - mousePosInParent.Y);
-                    newTop = fixedBottom - newHeight;
-                }
-
-                // 실제 PictureBox 속성 업데이트
                 pb.SetBounds(newLeft, newTop, newWidth, newHeight);
-
-                // 텍스트박스 업데이트
                 textBox1.Text = pb.Width.ToString();
                 textBox2.Text = pb.Height.ToString();
             }
-            else if (isDragging) // 드래그 중일 때
+            else if (isDragging)
             {
-                // 현재 마우스 위치 (부모 컨트롤 기준)
                 Point currentMousePosition = pb.Parent.PointToClient(MousePosition);
-                // 드래그 시작 위치로부터의 변화량(델타) 계산
                 int deltaX = currentMousePosition.X - dragStartMousePosition.X;
                 int deltaY = currentMousePosition.Y - dragStartMousePosition.Y;
-
-                // 딕셔너리에 저장된 모든 선택 이미지들을 순회하며 위치 업데이트
                 foreach (var item in dragStartPositions)
                 {
-                    PictureBox targetPb = item.Key;
-                    Point startPosition = item.Value;
-
-                    targetPb.Location = new Point(startPosition.X + deltaX, startPosition.Y + deltaY);
+                    item.Key.Location = new Point(item.Value.X + deltaX, item.Value.Y + deltaY);
                 }
                 if (selectedImage != null)
                 {
@@ -453,14 +570,10 @@ namespace photo
                     textBox4.Text = selectedImage.Top.ToString();
                 }
             }
-            else // 드래그/리사이즈 중이 아닐 때 (커서 모양 변경)
+            else
             {
-                const int edge = 5; // 테두리 감지 영역
-                bool atTop = e.Y <= edge;
-                bool atBottom = e.Y >= pb.Height - edge;
-                bool atLeft = e.X <= edge;
-                bool atRight = e.X >= pb.Width - edge;
-
+                const int edge = 5;
+                bool atTop = e.Y <= edge, atBottom = e.Y >= pb.Height - edge, atLeft = e.X <= edge, atRight = e.X >= pb.Width - edge;
                 if (atTop && atLeft) { pb.Cursor = Cursors.SizeNWSE; resizeDirection = "TopLeft"; }
                 else if (atTop && atRight) { pb.Cursor = Cursors.SizeNESW; resizeDirection = "TopRight"; }
                 else if (atBottom && atLeft) { pb.Cursor = Cursors.SizeNESW; resizeDirection = "BottomLeft"; }
@@ -476,35 +589,65 @@ namespace photo
         // PictureBox 마우스 업 이벤트 핸들러 (드래그, 리사이즈 종료)
         private void pictureBox_MouseUp(object sender, MouseEventArgs e)
         {
-            if (sender is PictureBox pb)
+            if (sender is not PictureBox pb) return;
+
+            // ======== 작업 모드에 따른 기능 분기 ========
+            if (currentWorkMode == "펜" && isDrawing && currentStroke != null)
             {
-                // --- 우클릭 시 메뉴 표시 로직 (추가) ---
-                if (e.Button == MouseButtons.Right)
-                {
-                    // 메뉴 아이템 활성화/비활성화
-                    menuCopy.Enabled = selectedImages.Count > 0;
-                    menuDelete.Enabled = selectedImages.Count > 0;
-                    menuPaste.Enabled = clipboardContent.Count > 0;
-
-                    // 메뉴에 어떤 PictureBox에서 이벤트가 발생했는지 알려줌
-                    imageContextMenu.Tag = pb;
-                    imageContextMenu.Show(pb, e.Location);
-                }
-                if (isResizing)
-                {
-                    // 리사이즈 종료 후 최종 크기를 텍스트박스에 반영 (MouseMove에서 이미 반영되므로 선택사항)
-                    // textBox1.Text = pb.Width.ToString();
-                    // textBox2.Text = pb.Height.ToString();
-                    // UpdateSelectedImageSize(); // 필요시 호출하여 원본 이미지 리사이즈 반영
-                }
-
-                isDragging = false;
-                isResizing = false;
-                draggingPictureBox = null;
-                resizeDirection = "";
-
-                pb.Invalidate(); // 테두리 업데이트
+                if (penStrokesMap.TryGetValue(pb, out var strokes)) strokes.Add(currentStroke);
+                currentStroke = null;
+                isDrawing = false;
+                ApplyStrokesToImage(pb);
+                return;
             }
+            if (currentWorkMode == "지우개" && isDrawing)
+            {
+                isDrawing = false;
+                if (penStrokesMap.ContainsKey(pb)) ApplyStrokesToImage(pb);
+                return;
+            }
+            if (currentWorkMode == "모자이크" && isMosaicing)
+            {
+                isMosaicing = false;
+                if (!originalImages.ContainsKey(pb)) return;
+                Bitmap before = originalImages[pb];
+                Bitmap after = new Bitmap(before);
+                Rectangle finalRect = NormalizeRectangle(mosaicRect);
+                ApplyMosaic(after, finalRect, tbMosaicSize.Value);
+                pb.Image = after;
+                undoStack.Push(new EditAction(pb, before, (Bitmap)after.Clone(), "Mosaic", finalRect));
+                originalImages.Remove(pb);
+                pb.Invalidate();
+                return;
+            }
+            if (currentWorkMode == "자르기" && isCropping)
+            {
+                isCropping = false;
+                pb.Cursor = Cursors.Default;
+                pb.Invalidate();
+                return;
+            }
+
+            // "이동" 모드일 때만 아래 로직이 실행됩니다.
+            if (e.Button == MouseButtons.Right)
+            {
+                menuCopy.Enabled = selectedImages.Count > 0;
+                menuDelete.Enabled = selectedImages.Count > 0;
+                menuPaste.Enabled = clipboardContent.Count > 0;
+                imageContextMenu.Tag = pb;
+                imageContextMenu.Show(pb, e.Location);
+            }
+            if (isResizing)
+            {
+                UpdateSelectedImageSize();
+            }
+
+            isDragging = false;
+            isResizing = false;
+            draggingPictureBox = null;
+            resizeDirection = "";
+
+            pb.Invalidate();
         }
 
         // PictureBox 그리기 이벤트 핸들러 (선택 테두리, 이모지 미리보기)
@@ -518,29 +661,47 @@ namespace photo
             {
                 using (Pen pen = new Pen(Color.DeepSkyBlue, 2))
                 {
-                    // 마지막으로 선택된(활성화된) 이미지는 실선, 나머지는 점선으로 구분
-                    if (pb == selectedImage)
-                    {
-                        pen.DashStyle = DashStyle.Solid;
-                    }
-                    else
-                    {
-                        pen.DashStyle = DashStyle.Dot;
-                    }
-
+                    pen.DashStyle = (pb == selectedImage) ? DashStyle.Solid : DashStyle.Dot;
                     Rectangle rect = new Rectangle(0, 0, pb.Width - 1, pb.Height - 1);
                     e.Graphics.DrawRectangle(pen, rect);
                 }
             }
 
             // 이모지 미리보기 그리기
-            if (showEmojiPreview && pb == selectedImage && emojiPreviewImage != null)
+            if (showEmojiPreview && emojiPreviewImage != null)
             {
-                e.Graphics.DrawImage(emojiPreviewImage,
-                                     emojiPreviewLocation.X - emojiPreviewWidth / 2,
-                                     emojiPreviewLocation.Y - emojiPreviewHeight / 2,
-                                     emojiPreviewWidth, emojiPreviewHeight);
+                var basePb = (PictureBox)sender;
+                if (basePb.AllowDrop)
+                {
+                    e.Graphics.DrawImage(emojiPreviewImage,
+                       emojiPreviewLocation.X - emojiPreviewWidth / 2,
+                       emojiPreviewLocation.Y - emojiPreviewHeight / 2,
+                       emojiPreviewWidth, emojiPreviewHeight);
+                }
             }
+
+            // ======== [1번 코드 기능 추가] 펜 선 및 자르기 영역 그리기 ========
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+
+            // 1. 저장된 펜 선들 그리기 (ApplyStrokesToImage 적용으로 실시간 미리보기는 필요 없음)
+            // 2. 현재 그리고 있는 펜 선 그리기
+            if (isDrawing && currentWorkMode == "펜" && currentStroke != null && currentStroke.Points.Count >= 2)
+            {
+                using (Pen pen = new Pen(currentStroke.StrokeColor, currentStroke.StrokeWidth) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round })
+                {
+                    e.Graphics.DrawLines(pen, currentStroke.Points.ToArray());
+                }
+            }
+
+            // 3. 자르기 영역 사각형 그리기
+            if (currentWorkMode == "자르기" && isCropping && pb == selectedImage && cropRect.Width > 0 && cropRect.Height > 0)
+            {
+                using (Pen cropPen = new Pen(Color.Red, 2) { DashStyle = DashStyle.Dash })
+                {
+                    e.Graphics.DrawRectangle(cropPen, cropRect);
+                }
+            }
+            // =============================================================
         }
 
         // 컨트롤에 더블 버퍼링 활성화
@@ -905,7 +1066,190 @@ namespace photo
                 textBox4.Text = selectedImage.Top.ToString();
             }
         }
+        // ========== [1번 코드 기능 추가] UI 초기화 및 이벤트 핸들러 ==========
 
+        // 1번 패널(도구 모음)에 컨트롤들을 추가하는 메서드
+        private void InitializePanel1()
+        {
+            Panel panel1 = dynamicPanels[0]; // 0번 인덱스 패널을 사용
+            panel1.Controls.Clear();
+            panel1.AutoScroll = true;
+
+            int marginTop = 20;
+            int spacing = 15;
+            int controlWidth = 200;
+            int currentY = marginTop;
+
+            // 1. 이미지 투명도
+            Label lblTransparency = new Label { Text = "이미지 투명도", Location = new Point(10, currentY) };
+            panel1.Controls.Add(lblTransparency);
+            currentY = lblTransparency.Bottom + spacing;
+
+            tbTransparencyGlobal = new TrackBar
+            {
+                Minimum = 0,
+                Maximum = 255,
+                Value = 255,
+                TickFrequency = 10,
+                Width = controlWidth,
+                Location = new Point(10, currentY)
+            };
+            panel1.Controls.Add(tbTransparencyGlobal);
+            tbTransparencyGlobal.ValueChanged += TbTransparencyGlobal_ValueChanged;
+            currentY = tbTransparencyGlobal.Bottom + spacing;
+
+            // 2. 색상 선택
+            Button btnColorSelect = new Button { Text = "색상 선택", Location = new Point(10, currentY), Size = new Size(80, 30) };
+            panel1.Controls.Add(btnColorSelect);
+            btnColorSelect.Click += BtnColorSelect_Click;
+
+            panelColorSelected = new Panel
+            {
+                BackColor = Color.Black,
+                Location = new Point(btnColorSelect.Right + 10, btnColorSelect.Top),
+                Size = new Size(40, 40),
+                BorderStyle = BorderStyle.FixedSingle
+            };
+            panel1.Controls.Add(panelColorSelected);
+
+            lblRGB = new Label
+            {
+                Text = "RGB: 0, 0, 0\nHex: #000000",
+                Location = new Point(panelColorSelected.Right + 10, btnColorSelect.Top + 5),
+                AutoSize = true
+            };
+            panel1.Controls.Add(lblRGB);
+
+            Label lblPicked = new Label { Text = "스포이드 색상", Location = new Point(10, btnColorSelect.Bottom + spacing), AutoSize = true };
+            panel1.Controls.Add(lblPicked);
+
+            panelColorPicked = new Panel
+            {
+                BackColor = Color.White,
+                Location = new Point(lblPicked.Right + 10, lblPicked.Top - 2),
+                Size = new Size(40, 20),
+                BorderStyle = BorderStyle.FixedSingle
+            };
+            panel1.Controls.Add(panelColorPicked);
+            currentY = lblPicked.Bottom + spacing;
+
+            // 3. 작업 모드
+            GroupBox gbModes = new GroupBox
+            {
+                Text = "작업 모드",
+                Location = new Point(10, currentY),
+                Size = new Size(250, 120)
+            };
+            string[] modes = { "이동", "스포이드", "펜", "지우개", "모자이크", "자르기", "삭제" };
+            for (int i = 0; i < modes.Length; i++)
+            {
+                int index = i;
+                var rb = new RadioButton
+                {
+                    Text = modes[i],
+                    Location = new Point(10 + (index % 3) * 80, 20 + (index / 3) * 25),
+                    AutoSize = true,
+                    Checked = (modes[index] == "이동")
+                };
+                rb.CheckedChanged += (s, e) => {
+                    if (rb.Checked)
+                    {
+                        currentWorkMode = rb.Text;
+                        this.Cursor = (currentWorkMode == "스포이드") ? Cursors.Cross : Cursors.Default;
+                    }
+                };
+                gbModes.Controls.Add(rb);
+            }
+            panel1.Controls.Add(gbModes);
+            currentY = gbModes.Bottom + spacing;
+
+            // 4. 되돌리기 버튼 (모자이크 등)
+            Button btnUndo = new Button { Text = "편집 되돌리기", Location = new Point(10, currentY), Width = 100 };
+            btnUndo.Click += (s, e) => PerformUndo(); // Undo 메서드 연결
+            panel1.Controls.Add(btnUndo);
+            currentY = btnUndo.Bottom + spacing;
+
+            // 5. 펜/지우개 속성
+            Label lblPen = new Label { Text = "펜/지우개 굵기", Location = new Point(10, currentY) };
+            panel1.Controls.Add(lblPen);
+            currentY = lblPen.Bottom + 5;
+
+            tbPenSize = new TrackBar
+            {
+                Minimum = 1,
+                Maximum = 50,
+                Value = 5,
+                TickFrequency = 5,
+                Width = controlWidth,
+                Location = new Point(10, currentY)
+            };
+            panel1.Controls.Add(tbPenSize);
+            currentY = tbPenSize.Bottom + spacing;
+
+            // 6. 모자이크 속성
+            Label lblMosaic = new Label { Text = "모자이크 블록 크기", Location = new Point(10, currentY) };
+            panel1.Controls.Add(lblMosaic);
+            currentY = lblMosaic.Bottom + 5;
+
+            tbMosaicSize = new TrackBar
+            {
+                Minimum = 2,
+                Maximum = 50,
+                Value = 10,
+                TickFrequency = 5,
+                Width = controlWidth,
+                Location = new Point(10, currentY)
+            };
+            panel1.Controls.Add(tbMosaicSize);
+            currentY = tbMosaicSize.Bottom + spacing;
+
+            // 7. 자르기 확정 버튼
+            Button btnConfirmCrop = new Button
+            {
+                Text = "자르기 확정",
+                Location = new Point(10, currentY),
+                Size = new Size(100, 30)
+            };
+            btnConfirmCrop.Click += BtnConfirmCrop_Click;
+            panel1.Controls.Add(btnConfirmCrop);
+        }
+
+        // 색상 선택 다이얼로그 띄우기
+        private void BtnColorSelect_Click(object sender, EventArgs e)
+        {
+            using (ColorDialog cd = new ColorDialog())
+            {
+                cd.FullOpen = true;
+                cd.Color = panelColorSelected.BackColor;
+                if (cd.ShowDialog() == DialogResult.OK)
+                {
+                    Color selected = cd.Color;
+                    panelColorSelected.BackColor = selected;
+                    lblRGB.Text = $"RGB: {selected.R}, {selected.G}, {selected.B}\nHex: #{selected.R:X2}{selected.G:X2}{selected.B:X2}";
+                }
+            }
+        }
+
+        // 투명도 조절 트랙바 이벤트
+        private void TbTransparencyGlobal_ValueChanged(object sender, EventArgs e)
+        {
+            if (selectedImage == null || selectedImage.Image == null) return;
+            int alpha = tbTransparencyGlobal.Value;
+            if (!(selectedImage.Tag is Bitmap originalBitmap)) return;
+
+            Bitmap transparentCopy = new Bitmap(originalBitmap.Width, originalBitmap.Height);
+            using (Graphics g = Graphics.FromImage(transparentCopy))
+            {
+                ColorMatrix matrix = new ColorMatrix();
+                matrix.Matrix33 = (float)alpha / 255; // Alpha 값 조절
+                ImageAttributes attributes = new ImageAttributes();
+                attributes.SetColorMatrix(matrix, ColorMatrixFlag.Default, ColorAdjustType.Bitmap);
+                g.DrawImage(originalBitmap, new Rectangle(0, 0, originalBitmap.Width, originalBitmap.Height), 0, 0, originalBitmap.Width, originalBitmap.Height, GraphicsUnit.Pixel, attributes);
+            }
+            selectedImage.Image?.Dispose();
+            selectedImage.Image = transparentCopy;
+            imageTransparencyMap[selectedImage] = alpha;
+        }
         // 동적 컨트롤 초기화 (패널 및 버튼)
         private void InitializeDynamicControls()
         {
@@ -921,15 +1265,27 @@ namespace photo
                 {
                     Location = panelLocation,
                     Size = panelSize,
-                    Visible = false, // 처음에는 모두 숨김
+                    Visible = false,
                     BorderStyle = BorderStyle.FixedSingle
                 };
 
-                if (i == 1) // 현수 - 두 번째 패널에 이미지 필터 편집 기능 추가
+                // ★★★★★ 바로 이 부분입니다! ★★★★★
+                // 패널을 배열에 먼저 할당해야, InitializePanel1 등에서 해당 패널을 사용할 수 있습니다.
+                dynamicPanels[i] = panel;
+                panel.Paint += Panel_Paint;
+                // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+
+                if (i == 0) // 1번 버튼: 펜, 모자이크, 자르기 등 종합 도구 패널
+                {
+                    // 위에서 dynamicPanels[0]에 panel을 할당했기 때문에
+                    // 이제 InitializePanel1() 안에서 dynamicPanels[0]은 null이 아닙니다.
+                    InitializePanel1();
+                }
+                else if (i == 1) // 2번 버튼: 이미지 필터 편집 기능 패널
                 {
                     AddImageEditControls(panel);
                 }
-                else if (i == 7) // 이모지 패널 (8번 버튼에 해당)
+                else if (i == 7) // 8번 버튼: 이모지 패널
                 {
                     panel.AllowDrop = true;
                     panel.AutoScroll = true;
@@ -937,11 +1293,11 @@ namespace photo
                     {
                         Text = "이모지 선택",
                         Location = new Point(10, 10),
-                        Font = new Font(Font, FontStyle.Bold)
+                        Font = new Font(this.Font, FontStyle.Bold)
                     });
-                    AddEmojiControls(panel); // 이모지 컨트롤 추가
+                    AddEmojiControls(panel);
                 }
-                else // 일반적인 패널 (기본 텍스트만)
+                else // 나머지 일반 패널
                 {
                     panel.Controls.Add(new Label()
                     {
@@ -950,9 +1306,7 @@ namespace photo
                     });
                 }
 
-                panel.Paint += Panel_Paint; // 패널 테두리 그리기 이벤트
                 this.Controls.Add(panel);
-                dynamicPanels[i] = panel;
             }
 
             // 2. 버튼 생성 (왼쪽 사이드바)
@@ -962,7 +1316,7 @@ namespace photo
             int startX = 15;
             int buttonStartY = 95;
             int columns = 2;
-            int buttonCount = 10; // 10개의 버튼
+            int buttonCount = 10;
             dynamicButtons = new Button[buttonCount];
 
             for (int i = 0; i < buttonCount; i++)
@@ -970,16 +1324,13 @@ namespace photo
                 Button btn = new Button();
                 btn.Text = $"{i + 1}";
                 btn.Size = new Size(buttonWidth, buttonHeight);
-
                 int col = i % columns;
                 int row = i / columns;
-
                 btn.Location = new Point(
                     startX + col * (buttonWidth + spacing),
                     buttonStartY + row * (buttonHeight + spacing));
-                btn.Tag = i; // 버튼 인덱스를 Tag에 저장
-                btn.Click += Button_Click; // 클릭 이벤트 핸들러 연결
-
+                btn.Tag = i;
+                btn.Click += Button_Click;
                 this.Controls.Add(btn);
                 dynamicButtons[i] = btn;
             }
@@ -2370,12 +2721,258 @@ namespace photo
                 }
             }
         }
+        private void PerformUndo()
+        {
+            if (undoStack.Count == 0) return;
+            EditAction action = undoStack.Pop();
+            redoStack.Push(new EditAction(action.Target, (Bitmap)action.Target.Image.Clone(), action.Before, action.ActionType, action.AffectedArea));
+            action.Target.Image?.Dispose();
+            action.Target.Image = (Bitmap)action.Before.Clone();
+            action.Target.Invalidate();
+        }
+
+        // 점과 선분 사이의 거리 계산 (지우개용)
+        private float Distance(Point a, Point b)
+        {
+            float dx = a.X - b.X;
+            float dy = a.Y - b.Y;
+            return (float)Math.Sqrt(dx * dx + dy * dy);
+        }
+
+        // 모자이크 미리보기용 메서드 (원본 이미지를 변경하지 않음)
+        private Bitmap ApplyMosaicToPreview(Bitmap original, Rectangle rect, int blockSize)
+        {
+            Bitmap preview = (Bitmap)original.Clone();
+            ApplyMosaic(preview, rect, blockSize); // unsafe 메서드 호출
+            return preview;
+        }
+
+        // Unsafe 코드를 사용한 고속 모자이크 적용
+        private unsafe void ApplyMosaic(Bitmap bmp, Rectangle rect, int blockSize)
+        {
+            if (blockSize <= 1) return;
+            rect.Intersect(new Rectangle(0, 0, bmp.Width, bmp.Height));
+            if (rect.IsEmpty) return;
+
+            Bitmap bmp32 = null;
+            try
+            {
+                // 32bppArgb로 변환하여 알파 채널을 포함해 처리
+                bmp32 = bmp.PixelFormat == PixelFormat.Format32bppArgb ? bmp : new Bitmap(bmp.Width, bmp.Height, PixelFormat.Format32bppArgb);
+                if (bmp.PixelFormat != PixelFormat.Format32bppArgb)
+                {
+                    using (Graphics g = Graphics.FromImage(bmp32))
+                    {
+                        g.DrawImage(bmp, new Rectangle(0, 0, bmp.Width, bmp.Height));
+                    }
+                }
+
+                BitmapData data = bmp32.LockBits(new Rectangle(0, 0, bmp32.Width, bmp32.Height),
+                                                 ImageLockMode.ReadWrite, PixelFormat.Format32bppArgb);
+
+                byte* ptrBase = (byte*)data.Scan0;
+                int stride = data.Stride;
+
+                for (int y = rect.Top; y < rect.Bottom; y += blockSize)
+                {
+                    for (int x = rect.Left; x < rect.Right; x += blockSize)
+                    {
+                        long r = 0, g = 0, b = 0, a = 0;
+                        int count = 0;
+                        int blockEndY = Math.Min(y + blockSize, rect.Bottom);
+                        int blockEndX = Math.Min(x + blockSize, rect.Right);
+
+                        for (int j = y; j < blockEndY; j++)
+                        {
+                            byte* row = ptrBase + j * stride;
+                            for (int i = x; i < blockEndX; i++)
+                            {
+                                byte* pixel = row + i * 4;
+                                b += pixel[0]; g += pixel[1]; r += pixel[2]; a += pixel[3];
+                                count++;
+                            }
+                        }
+
+                        if (count == 0) continue;
+                        byte avgR = (byte)(r / count);
+                        byte avgG = (byte)(g / count);
+                        byte avgB = (byte)(b / count);
+                        byte avgA = (byte)(a / count);
+
+                        for (int j = y; j < blockEndY; j++)
+                        {
+                            byte* row = ptrBase + j * stride;
+                            for (int i = x; i < blockEndX; i++)
+                            {
+                                byte* pixel = row + i * 4;
+                                pixel[0] = avgB; pixel[1] = avgG; pixel[2] = avgR; pixel[3] = avgA;
+                            }
+                        }
+                    }
+                }
+                bmp32.UnlockBits(data);
+
+                if (bmp != bmp32) // 변환된 경우에만 원본에 다시 그리기
+                {
+                    using (Graphics g = Graphics.FromImage(bmp))
+                    {
+                        g.DrawImage(bmp32, 0, 0);
+                    }
+                }
+            }
+            finally
+            {
+                if (bmp != bmp32) bmp32?.Dispose();
+            }
+        }
+
+
+        // 자르기 확정 버튼 클릭 이벤트
+        private void BtnConfirmCrop_Click(object sender, EventArgs e)
+        {
+            if (selectedImage == null || selectedImage.Image == null || cropRect.Width <= 0 || cropRect.Height <= 0)
+            {
+                MessageBox.Show("자를 이미지를 선택하고 드래그로 영역을 지정하세요.");
+                return;
+            }
+
+            Bitmap sourceBitmap = (Bitmap)selectedImage.Image;
+            Rectangle intersected = Rectangle.Intersect(cropRect, new Rectangle(Point.Empty, sourceBitmap.Size));
+            if (intersected.Width > 0 && intersected.Height > 0)
+            {
+                Bitmap cropped = sourceBitmap.Clone(intersected, sourceBitmap.PixelFormat);
+
+                PictureBox pbNew = new PictureBox
+                {
+                    Image = cropped,
+                    SizeMode = PictureBoxSizeMode.StretchImage,
+                    Size = cropped.Size,
+                    Location = new Point(selectedImage.Right + 20, selectedImage.Top),
+                    Tag = new Bitmap(cropped)
+                };
+
+                EnableDoubleBuffering(pbNew);
+                imageList.Add((pbNew, (Bitmap)pbNew.Tag));
+                imageTransparencyMap[pbNew] = 255;
+
+                pbNew.MouseDown += pictureBox_MouseDown;
+                pbNew.MouseMove += pictureBox_MouseMove;
+                pbNew.MouseUp += pictureBox_MouseUp;
+                pbNew.Paint += pictureBox_Paint;
+
+                pbNew.AllowDrop = true;
+                pbNew.DragEnter += PictureBox_DragEnter;
+                pbNew.DragOver += PictureBox_DragOver;
+                pbNew.DragDrop += PictureBox_DragDrop;
+                pbNew.DragLeave += PictureBox_DragLeave;
+
+                tabControl1.SelectedTab.Controls.Add(pbNew);
+                pbNew.BringToFront();
+
+                selectedImages.Clear();
+                selectedImages.Add(pbNew);
+                selectedImage = pbNew;
+                pbNew.Invalidate();
+            }
+        }
+
+        // 그려진 선들을 이미지에 영구적으로 합성하는 메서드
+        private void ApplyStrokesToImage(PictureBox pb)
+        {
+            if (penStrokesMap.TryGetValue(pb, out var strokes) && strokes.Any())
+            {
+                using (Graphics g = Graphics.FromImage(pb.Image))
+                {
+                    g.SmoothingMode = SmoothingMode.AntiAlias;
+                    foreach (var stroke in strokes)
+                    {
+                        if (stroke.Points.Count >= 2)
+                        {
+                            using (Pen pen = new Pen(stroke.StrokeColor, stroke.StrokeWidth) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round })
+                            {
+                                g.DrawLines(pen, stroke.Points.ToArray());
+                            }
+                        }
+                    }
+                }
+                strokes.Clear();
+                pb.Invalidate();
+            }
+        }
+
+
+        // 사각형 영역 확장 (삭제 판정용)
+        private Rectangle Enlarge(Rectangle rect, int margin)
+        {
+            return new Rectangle(rect.X - margin, rect.Y - margin, rect.Width + margin * 2, rect.Height + margin * 2);
+        }
+
+        // 삭제된 모자이크 영역 복원
+        private void RestoreMosaicArea(PictureBox pb, EditAction action)
+        {
+            if (pb.Image is Bitmap current && action.Before is Bitmap before && action.AffectedArea.HasValue)
+            {
+                Rectangle area = action.AffectedArea.Value;
+                using (Graphics g = Graphics.FromImage(current))
+                {
+                    g.DrawImage(before, area, area, GraphicsUnit.Pixel);
+                }
+                pb.Invalidate();
+            }
+        }
+
+        // 사각형 좌표 정규화 (음수 너비/높이 방지)
+        private Rectangle NormalizeRectangle(Rectangle rect)
+        {
+            return new Rectangle(
+                Math.Min(rect.Left, rect.Right),
+                Math.Min(rect.Top, rect.Bottom),
+                Math.Abs(rect.Width),
+                Math.Abs(rect.Height)
+            );
+        }
+
     }
+
     // Form1 클래스 바깥에 추가
     public class EmojiState
     {
         public Image Image { get; set; }
         public Point Location { get; set; }
         public Size Size { get; set; }
+    }
+    public class PenStroke
+    {
+        public List<Point> Points = new List<Point>();
+        public Color StrokeColor;
+        public float StrokeWidth;
+
+        public Rectangle GetBoundingBox()
+        {
+            if (Points.Count == 0) return Rectangle.Empty;
+            int minX = Points.Min(p => p.X);
+            int minY = Points.Min(p => p.Y);
+            int maxX = Points.Max(p => p.X);
+            int maxY = Points.Max(p => p.Y);
+            return new Rectangle(minX, minY, maxX - minX, maxY - minY);
+        }
+    }
+
+    public class EditAction
+    {
+        public PictureBox Target { get; set; }
+        public Bitmap Before { get; set; }
+        public Bitmap After { get; set; }
+        public string ActionType { get; set; }
+        public Rectangle? AffectedArea { get; set; } // 모자이크 영역 등
+
+        public EditAction(PictureBox target, Bitmap before, Bitmap after, string actionType, Rectangle? affectedArea = null)
+        {
+            Target = target;
+            Before = before;
+            After = after;
+            ActionType = actionType;
+            AffectedArea = affectedArea;
+        }
     }
 }
