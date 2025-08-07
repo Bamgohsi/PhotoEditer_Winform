@@ -8,6 +8,7 @@ using System.Drawing.Imaging; // Added for ColorMatrix, ImageAttributes
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -72,6 +73,14 @@ namespace photo
         private Size resizeStartSize; // 사용되지 않음
         private Point resizeStartLocation; // 사용되지 않음
         private string resizeDirection = "";
+
+        // Win32 API 선언 (배경화면 설정을 위해)
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);
+
+        private const int SPI_SETDESKWALLPAPER = 20;
+        private const int SPIF_UPDATEINIFILE = 0x01;
+        private const int SPIF_SENDWININICHANGE = 0x02;
 
         // 기존 showSelectionBorder (문형님 코드)는 삭제
         // private bool showSelectionBorder = false;
@@ -145,7 +154,7 @@ namespace photo
         private bool isMosaicing = false;          // 모자이크 드래그 중인지 여부
         private Point mosaicStartPoint;            // 모자이크 드래그 시작 위치
         private Rectangle mosaicRect;              // 모자이크 드래그된 사각형
-       
+
         // 펜 그리기 데이터 저장용
         private Dictionary<PictureBox, List<PenStroke>> penStrokesMap = new Dictionary<PictureBox, List<PenStroke>>();
         private PenStroke currentStroke = null; // 현재 그리고 있는 선
@@ -3080,6 +3089,310 @@ namespace photo
         private void button4_Click(object sender, EventArgs e)
         {
             TogglePanelVisibility(0);
+        }
+
+        private void toolStrip_NewFile_Click(object sender, EventArgs e)   //툴 새로만들기
+        {
+            TabPage currentTab = tabControl1.SelectedTab;
+            if (currentTab != null)
+            {
+                // 현재 탭의 모든 PictureBox 제거
+                var pictureBoxesToRemove = currentTab.Controls
+                    .OfType<PictureBox>()
+                    .ToList();
+                foreach (var pb in pictureBoxesToRemove)
+                {
+                    currentTab.Controls.Remove(pb);
+                    pb.Dispose();
+                }
+            }
+
+            // 현수 - 편집 관련 변수 초기화
+            originalImage = null;
+            _initialImage = null;
+            // 선택된 이미지 및 리스트 초기화
+            selectedImage = null;
+            selectedImages.Clear();
+            imageList.Clear(); // 이미지 리스트도 초기화
+            btnResetAll_Click(null, null); // 편집 컨트롤 초기화
+        }
+
+        private void toolStrip_Open_Click(object sender, EventArgs e)   //툴 파일열기
+        {
+            OpenFileDialog openFileDialog = new OpenFileDialog();
+            openFileDialog.Title = "이미지 열기";
+            openFileDialog.Filter = "이미지 파일|*.jpg;*.jpeg;*.png;*.bmp;*.gif";
+
+            if (openFileDialog.ShowDialog() == DialogResult.OK)
+            {
+                string filePath = openFileDialog.FileName;
+                try
+                {
+                    TabPage currentTab = tabControl1.SelectedTab;
+                    if (currentTab == null) return; // 현재 탭이 없으면 아무것도 하지 않음
+
+                    // 기존 선택된 이미지들 초기화
+                    foreach (var item in selectedImages) { item.Invalidate(); }
+                    selectedImages.Clear();
+                    selectedImage = null;
+
+                    PictureBox pb = new PictureBox();
+                    pb.AllowDrop = true; // 이모지 드래그 앤 드롭 허용
+                    pb.DragEnter += PictureBox_DragEnter;
+                    pb.DragOver += PictureBox_DragOver;
+                    pb.DragLeave += PictureBox_DragLeave;
+                    pb.DragDrop += PictureBox_DragDrop;
+
+                    // PictureBox 속성 설정
+                    pb.SizeMode = PictureBoxSizeMode.StretchImage; // 이미지 크기 조절 가능
+                    pb.Anchor = AnchorStyles.Top | AnchorStyles.Left; // 자동 레이아웃 충돌 방지
+                    pb.Dock = DockStyle.None; // Dock 속성 해제
+                    pb.Location = new Point(10, 30); // 초기 위치
+                    EnableDoubleBuffering(pb); // 더블 버퍼링 활성화
+
+                    Bitmap originalCopy;
+                    using (var original = new Bitmap(Image.FromFile(filePath)))
+                    {
+                        originalCopy = new Bitmap(original);
+                    }
+
+                    pb.Image = new Bitmap(originalCopy);
+                    pb.Size = pb.Image.Size; // 초기 크기는 이미지 크기로 설정
+                    pb.Tag = originalCopy; // 원본 비트맵을 Tag에 저장
+                    imageList.Add((pb, originalCopy)); // imageList에 추가
+
+                    // PictureBox 이벤트 핸들러 연결
+                    pb.MouseDown += pictureBox_MouseDown;
+                    pb.MouseMove += pictureBox_MouseMove;
+                    pb.MouseUp += pictureBox_MouseUp;
+                    pb.Paint += pictureBox_Paint;
+
+                    currentTab.Controls.Add(pb); // 현재 탭에 PictureBox 추가
+
+                    // UI 텍스트박스 업데이트 및 선택 상태 설정
+                    textBox1.Text = pb.Width.ToString();
+                    textBox2.Text = pb.Height.ToString();
+                    selectedImage = pb;
+                    selectedImages.Add(pb); // 새 이미지 선택 리스트에 추가
+                    pb.Invalidate(); // 테두리 그리기를 위해 Invalidate 호출
+
+                    // 현수 - 이미지 편집용 원본 이미지 저장 및 컨트롤 초기화
+                    originalImage = new Bitmap(originalCopy);
+                    _initialImage = new Bitmap(originalCopy);
+                    btnResetAll_Click(null, null); // 편집 컨트롤 초기화
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("이미지를 불러오는 중 오류 발생:\n" + ex.Message);
+                }
+            }
+        }
+
+        private void toolStripp_Save_Click(object sender, EventArgs e)   //툴 저장하기
+        {
+            TabPage currentTab = tabControl1.SelectedTab;
+            var pictureBoxes = currentTab.Controls
+                .OfType<PictureBox>()
+                .Where(pb => pb.Image != null)
+                .ToList();
+            if (pictureBoxes.Count == 0)
+            {
+                MessageBox.Show("저장할 이미지가 없습니다.");
+                return;
+            }
+
+            int maxRight = 0;
+            int maxBottom = 0;
+            foreach (var pb in pictureBoxes)
+            {
+                maxRight = Math.Max(maxRight, pb.Right);
+                maxBottom = Math.Max(maxBottom, pb.Bottom);
+            }
+
+            Bitmap combinedImage = new Bitmap(maxRight, maxBottom);
+            using (Graphics g = Graphics.FromImage(combinedImage))
+            {
+                g.Clear(Color.White); // 배경을 흰색으로
+                foreach (var pb in pictureBoxes)
+                {
+                    g.DrawImage(pb.Image, pb.Location); // PictureBox의 이미지를 그립니다.
+                }
+            }
+
+            SaveFileDialog saveFileDialog = new SaveFileDialog();
+            saveFileDialog.Title = "이미지 저장";
+            saveFileDialog.Filter = "JPEG 파일 (*.jpg;*.jpeg)|*.jpg;*.jpeg|PNG 파일 (*.png)|*.png|BMP 파일 (*.bmp)|*.bmp|GIF 파일 (*.gif)|*.gif";
+            if (saveFileDialog.ShowDialog() == DialogResult.OK)
+            {
+                string ext = Path.GetExtension(saveFileDialog.FileName).ToLower();
+                var format = System.Drawing.Imaging.ImageFormat.Png; // 기본 형식
+
+                switch (ext)
+                {
+                    case ".jpg":
+                    case ".jpeg": format = System.Drawing.Imaging.ImageFormat.Jpeg; break;
+                    case ".bmp": format = System.Drawing.Imaging.ImageFormat.Bmp; break;
+                    case ".gif": format = System.Drawing.Imaging.ImageFormat.Gif; break;
+                    case ".png": format = System.Drawing.Imaging.ImageFormat.Png; break;
+                    default:
+                        MessageBox.Show("지원하지 않는 파일 형식입니다.");
+                        return;
+                }
+
+                try
+                {
+                    combinedImage.Save(saveFileDialog.FileName, format);
+                    MessageBox.Show("모든 이미지가 하나로 저장되었습니다.");
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"이미지 저장 중 오류 발생:\n{ex.Message}");
+                }
+            }
+            combinedImage.Dispose(); // 사용 후 리소스 해제
+        }
+
+        private void toolStripMenuItem1_Click(object sender, EventArgs e)  //배경화면 설정하기 툴
+        {
+            TabPage currentTab = tabControl1.SelectedTab;
+
+            if (currentTab == null)
+            {
+                MessageBox.Show("탭이 선택되지 않았습니다.");
+                return;
+            }
+
+            // 현재 탭 내 모든 PictureBox 수집
+            var pictureBoxes = currentTab.Controls
+                .OfType<PictureBox>()
+                .Where(pb => pb.Image != null)
+                .ToList();
+
+            if (pictureBoxes.Count == 0)
+            {
+                MessageBox.Show("설정할 이미지가 없습니다.");
+                return;
+            }
+
+            // 전체 병합 이미지의 크기를 계산 (모든 PictureBox의 위치 + 크기 고려)
+            int maxRight = 0;
+            int maxBottom = 0;
+            foreach (var pb in pictureBoxes)
+            {
+                maxRight = Math.Max(maxRight, pb.Right);
+                maxBottom = Math.Max(maxBottom, pb.Bottom);
+            }
+
+            Bitmap combinedImage = new Bitmap(maxRight, maxBottom);
+            using (Graphics g = Graphics.FromImage(combinedImage))
+            {
+                g.Clear(Color.White); // 배경 흰색
+
+                foreach (var pb in pictureBoxes)
+                {
+                    g.DrawImage(pb.Image, pb.Location);
+                }
+            }
+
+            try
+            {
+                string tempPath = Path.Combine(Path.GetTempPath(), "wallpaper.jpg");
+                combinedImage.Save(tempPath, System.Drawing.Imaging.ImageFormat.Jpeg);
+
+                bool result = SystemParametersInfo(SPI_SETDESKWALLPAPER, 0, tempPath,
+                    SPIF_UPDATEINIFILE | SPIF_SENDWININICHANGE);
+
+                if (!result)
+                {
+                    MessageBox.Show("배경화면 설정 실패");
+                }
+                else
+                {
+                    MessageBox.Show("배경화면이 설정되었습니다.");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("오류: " + ex.Message);
+            }
+            finally
+            {
+                combinedImage.Dispose(); // 리소스 해제
+            }
+        }
+
+        private void toolStripMenuItem2_Click(object sender, EventArgs e)  //확대 툴
+        {
+            // 선택된 모든 이미지에 대해 확대 적용
+            foreach (var pb in selectedImages)
+            {
+                // imageList에서 현재 PictureBox에 해당하는 원본 이미지를 찾음
+                var imageEntry = imageList.FirstOrDefault(entry => entry.pb == pb);
+                if (imageEntry.pb != null)
+                {
+                    Bitmap original = imageEntry.original;
+                    // 현재 크기를 기준으로 1.2배 큰 새로운 크기 계산
+                    int newWidth = (int)(pb.Width * 1.2f);
+                    int newHeight = (int)(pb.Height * 1.2f);
+
+                    // 최대 크기 제한 (원본 이미지의 MAX_SCALE 배를 넘지 않도록)
+                    if (newWidth > original.Width * MAX_SCALE || newHeight > original.Height * MAX_SCALE)
+                    {
+                        continue; // 너무 커지면 건너뛰기
+                    }
+
+                    // 고화질 리사이징
+                    pb.Image?.Dispose(); // 기존 이미지 리소스 해제
+                    pb.Image = ResizeImageHighQuality(original, new Size(newWidth, newHeight));
+                    pb.Size = pb.Image.Size; // 계산된 크기로 설정
+                }
+            }
+
+            // UI 텍스트박스에 마지막으로 선택된 이미지의 크기를 업데이트
+            if (selectedImage != null)
+            {
+                textBox1.Text = selectedImage.Width.ToString();
+                textBox2.Text = selectedImage.Height.ToString();
+                textBox3.Text = selectedImage.Left.ToString();
+                textBox4.Text = selectedImage.Top.ToString();
+            }
+        }
+
+        private void toolStripMenuItem4_Click(object sender, EventArgs e)  //축소 툴
+        {
+            // 선택된 모든 이미지에 대해 축소 적용
+            foreach (var pb in selectedImages)
+            {
+                // imageList에서 현재 PictureBox에 해당하는 원본 이미지를 찾음
+                var imageEntry = imageList.FirstOrDefault(entry => entry.pb == pb);
+                if (imageEntry.pb != null)
+                {
+                    Bitmap original = imageEntry.original;
+                    // 현재 크기를 기준으로 0.8배 작은 새로운 크기 계산
+                    int newWidth = (int)(pb.Width * 0.8f);
+                    int newHeight = (int)(pb.Height * 0.8f);
+
+                    // 최소 크기 제한 (원본 이미지의 MIN_SCALE 배보다 작아지지 않도록)
+                    if (newWidth < original.Width * MIN_SCALE || newHeight < original.Height * MIN_SCALE)
+                    {
+                        continue; // 너무 작아지면 건너뛰기
+                    }
+
+                    // 고화질 리사이징
+                    pb.Image?.Dispose(); // 기존 이미지 리소스 해제
+                    pb.Image = ResizeImageHighQuality(original, new Size(newWidth, newHeight));
+                    pb.Size = pb.Image.Size; // 계산된 크기로 설정
+                }
+            }
+
+            // UI 텍스트박스에 마지막으로 선택된 이미지의 크기를 업데이트
+            if (selectedImage != null)
+            {
+                textBox1.Text = selectedImage.Width.ToString();
+                textBox2.Text = selectedImage.Height.ToString();
+                textBox3.Text = selectedImage.Left.ToString();
+                textBox4.Text = selectedImage.Top.ToString();
+            }
         }
     }
 

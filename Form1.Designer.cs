@@ -36,7 +36,10 @@
             toolStrip_NewFile = new ToolStripMenuItem();
             toolStrip_Open = new ToolStripMenuItem();
             toolStripp_Save = new ToolStripMenuItem();
+            toolStripMenuItem1 = new ToolStripMenuItem();
             toolStripMenuItem3 = new ToolStripMenuItem();
+            toolStripMenuItem2 = new ToolStripMenuItem();
+            toolStripMenuItem4 = new ToolStripMenuItem();
             groupBox2 = new GroupBox();
             label6 = new Label();
             label5 = new Label();
@@ -111,7 +114,7 @@
             // 
             // toolStrip_File
             // 
-            toolStrip_File.DropDownItems.AddRange(new ToolStripItem[] { toolStrip_NewFile, toolStrip_Open, toolStripp_Save });
+            toolStrip_File.DropDownItems.AddRange(new ToolStripItem[] { toolStrip_NewFile, toolStrip_Open, toolStripp_Save, toolStripMenuItem1 });
             toolStrip_File.Name = "toolStrip_File";
             toolStrip_File.Size = new Size(43, 20);
             toolStrip_File.Text = "파일";
@@ -122,6 +125,7 @@
             toolStrip_NewFile.ShortcutKeys = Keys.Control | Keys.N;
             toolStrip_NewFile.Size = new Size(181, 22);
             toolStrip_NewFile.Text = "새로 만들기";
+            toolStrip_NewFile.Click += toolStrip_NewFile_Click;
             // 
             // toolStrip_Open
             // 
@@ -129,6 +133,7 @@
             toolStrip_Open.ShortcutKeys = Keys.Control | Keys.O;
             toolStrip_Open.Size = new Size(181, 22);
             toolStrip_Open.Text = "열기";
+            toolStrip_Open.Click += toolStrip_Open_Click;
             // 
             // toolStripp_Save
             // 
@@ -136,12 +141,37 @@
             toolStripp_Save.ShortcutKeys = Keys.Control | Keys.S;
             toolStripp_Save.Size = new Size(181, 22);
             toolStripp_Save.Text = "저장하기";
+            toolStripp_Save.Click += toolStripp_Save_Click;
+            // 
+            // toolStripMenuItem1
+            // 
+            toolStripMenuItem1.Name = "toolStripMenuItem1";
+            toolStripMenuItem1.Size = new Size(181, 22);
+            toolStripMenuItem1.Text = "배경화면 설정하기";
+            toolStripMenuItem1.Click += toolStripMenuItem1_Click;
             // 
             // toolStripMenuItem3
             // 
+            toolStripMenuItem3.DropDownItems.AddRange(new ToolStripItem[] { toolStripMenuItem2, toolStripMenuItem4 });
             toolStripMenuItem3.Name = "toolStripMenuItem3";
-            toolStripMenuItem3.Size = new Size(127, 20);
-            toolStripMenuItem3.Text = "toolStripMenuItem3";
+            toolStripMenuItem3.Size = new Size(43, 20);
+            toolStripMenuItem3.Text = "보기";
+            // 
+            // toolStripMenuItem2
+            // 
+            toolStripMenuItem2.Name = "toolStripMenuItem2";
+            toolStripMenuItem2.ShortcutKeys = Keys.Control | Keys.Up;
+            toolStripMenuItem2.Size = new Size(180, 22);
+            toolStripMenuItem2.Text = "확대";
+            toolStripMenuItem2.Click += toolStripMenuItem2_Click;
+            // 
+            // toolStripMenuItem4
+            // 
+            toolStripMenuItem4.Name = "toolStripMenuItem4";
+            toolStripMenuItem4.ShortcutKeys = Keys.Control | Keys.Down;
+            toolStripMenuItem4.Size = new Size(180, 22);
+            toolStripMenuItem4.Text = "축소";
+            toolStripMenuItem4.Click += toolStripMenuItem4_Click;
             // 
             // groupBox2
             // 
@@ -570,5 +600,8 @@
         private Label label4;
         private Label label6;
         private Label label5;
+        private ToolStripMenuItem toolStripMenuItem1;
+        private ToolStripMenuItem toolStripMenuItem2;
+        private ToolStripMenuItem toolStripMenuItem4;
     }
 }
