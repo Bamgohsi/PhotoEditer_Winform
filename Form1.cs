@@ -18,7 +18,7 @@ namespace photo
     public partial class Form1 : Form
     {
         private ToolTip toolTip1; // 이모지 미리보기 툴팁
-        
+        private PictureBox cropPreviewBox; // <<< 미리보기 PictureBox 변수 선언
         private ContextMenuStrip imageContextMenu;
         private ToolStripMenuItem menuCopy;
         private ToolStripMenuItem menuPaste;
@@ -242,8 +242,25 @@ namespace photo
             toolTip.SetToolTip(button8, "모자이크");
             toolTip.SetToolTip(button9, "모자이크 해제");
             toolTip.SetToolTip(button10, "필터");
+            InitializeCropPreview();
         }
-
+        private void InitializeCropPreview()
+        {
+            cropPreviewBox = new PictureBox
+            {
+                // 폼 좌측 하단에 위치시킵니다.
+                Size = new Size(200, 200),
+                Location = new Point(LeftMargin, this.ClientSize.Height - 200 - BottomMargin),
+                SizeMode = PictureBoxSizeMode.Zoom, // 이미지가 컨트롤에 맞게 조절됨
+                BorderStyle = BorderStyle.FixedSingle,
+                Visible = false, // 평소에는 숨겨 둠
+                BackColor = Color.LightGray,
+                // 폼 크기가 변경될 때 위치를 유지하도록 설정
+                Anchor = AnchorStyles.Bottom | AnchorStyles.Left
+            };
+            this.Controls.Add(cropPreviewBox);
+            cropPreviewBox.BringToFront(); // 다른 컨트롤보다 항상 위에 보이도록 설정
+        }
         // 텍스트 박스에서 엔터 키 누르면 다음 컨트롤로 포커스 이동 (크기 변경 적용)
         private void TextBox_KeyDown_ApplyOnEnter(object sender, KeyEventArgs e)
         {
@@ -585,7 +602,36 @@ namespace photo
                     Math.Abs(cropStartPoint.X - cropEnd.X),
                     Math.Abs(cropStartPoint.Y - cropEnd.Y)
                 );
-                pb.Invalidate();
+                pb.Invalidate(); // 원본 이미지에 빨간 사각형을 다시 그리도록 요청
+
+                // ================== [새로 추가된 로직] ==================
+                // 유효한 자르기 영역일 경우 미리보기를 업데이트합니다.
+                if (selectedImage != null && selectedImage.Image != null && cropRect.Width > 1 && cropRect.Height > 1)
+                {
+                    // 실제 이미지 크기를 벗어나지 않도록 자르기 영역을 한정합니다.
+                    Rectangle validCropRect = Rectangle.Intersect(cropRect, new Rectangle(0, 0, selectedImage.Image.Width, selectedImage.Image.Height));
+
+                    if (validCropRect.Width > 1 && validCropRect.Height > 1)
+                    {
+                        // 원본 이미지에서 해당 영역만 복사하여 미리보기 이미지를 만듭니다.
+                        Bitmap sourceBmp = (Bitmap)selectedImage.Image;
+                        Bitmap preview = sourceBmp.Clone(validCropRect, sourceBmp.PixelFormat);
+
+                        // 미리보기 PictureBox에 이미지를 표시하고 보이게 합니다.
+                        cropPreviewBox.Image?.Dispose(); // 이전 미리보기 이미지 리소스 해제
+                        cropPreviewBox.Image = preview;
+                        cropPreviewBox.Visible = true;
+                    }
+                    else
+                    {
+                        cropPreviewBox.Visible = false; // 영역이 유효하지 않으면 숨김
+                    }
+                }
+                else
+                {
+                    cropPreviewBox.Visible = false; // 영역이 유효하지 않으면 숨김
+                }
+                // ========================================================
                 return;
             }
             if (currentWorkMode == "스포이드")
@@ -2870,14 +2916,11 @@ namespace photo
             }
 
             // 원본 이미지를 복사하여 임시 비트맵을 만듭니다.
-            // 원본 PictureBox의 이미지를 직접 수정하지 않기 위함입니다.
             Bitmap bitmapWithStrokes = new Bitmap(selectedImage.Image);
 
-            // ================== [새로 추가된 로직] ==================
-            // 선택된 이미지에 그려진 펜 선들이 있는지 확인합니다.
+            // 선택된 이미지에 그려진 펜 선들이 있는지 확인하고 임시 비트맵에 합칩니다.
             if (penStrokesMap.TryGetValue(selectedImage, out var strokes) && strokes.Any())
             {
-                // Graphics 객체를 이용해 임시 비트맵 위에 선들을 직접 그립니다.
                 using (Graphics g = Graphics.FromImage(bitmapWithStrokes))
                 {
                     g.SmoothingMode = SmoothingMode.AntiAlias;
@@ -2893,9 +2936,8 @@ namespace photo
                     }
                 }
             }
-            // ========================================================
 
-            // 이제 그림이 합쳐진 'bitmapWithStrokes'를 대상으로 자르기를 수행합니다.
+            // 그림이 합쳐진 비트맵을 대상으로 자르기를 수행합니다.
             Rectangle intersected = Rectangle.Intersect(cropRect, new Rectangle(Point.Empty, bitmapWithStrokes.Size));
             if (intersected.Width > 0 && intersected.Height > 0)
             {
@@ -2930,6 +2972,16 @@ namespace photo
                 selectedImage = pbNew;
                 pbNew.Invalidate();
             }
+
+            // ================== [수정된 부분] ==================
+            // 자르기 작업이 성공했든 실패했든, 열려있던 미리보기 창을 숨기고 리소스를 해제합니다.
+            if (cropPreviewBox != null)
+            {
+                cropPreviewBox.Visible = false;
+                cropPreviewBox.Image?.Dispose();
+                cropPreviewBox.Image = null;
+            }
+            // =================================================
 
             // 임시로 사용한 비트맵 리소스를 해제합니다.
             bitmapWithStrokes.Dispose();
