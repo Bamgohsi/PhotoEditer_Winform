@@ -429,15 +429,9 @@ namespace photo
             }
             if (currentWorkMode == "스포이드")
             {
-                Bitmap bmp = pb.Image as Bitmap;
-                if (bmp != null && e.X >= 0 && e.Y >= 0 && e.X < bmp.Width && e.Y < bmp.Height)
-                {
-                    Color picked = bmp.GetPixel(e.X, e.Y);
-                    panelColorPicked.BackColor = picked;
-                    panelColorSelected.BackColor = picked;
-                    lblRGB.Text = $"RGB: {picked.R}, {picked.G}, {picked.B}\nHex: #{picked.R:X2}{picked.G:X2}{picked.B:X2}";
-                }
-                return; // "스포이드" 작업 후 return
+                // 클릭 시, '스포이드 색상'(미리보기)을 '선택 색상'(최종)으로 확정합니다.
+                panelColorSelected.BackColor = panelColorPicked.BackColor;
+                return; // 스포이드 작업 후 다른 작업을 막기 위해 여기서 종료합니다.
             }
             if (currentWorkMode == "자르기")
             {
@@ -597,7 +591,26 @@ namespace photo
             if (currentWorkMode == "스포이드")
             {
                 pb.Cursor = Cursors.Cross;
-                return;
+                try
+                {
+                    Bitmap bmp = pb.Image as Bitmap;
+                    if (bmp != null && e.X >= 0 && e.Y >= 0 && e.X < bmp.Width && e.Y < bmp.Height)
+                    {
+                        // 마우스 아래 픽셀 색상을 가져옵니다.
+                        Color picked = bmp.GetPixel(e.X, e.Y);
+
+                        // '스포이드 색상' 미리보기 패널의 색상을 실시간으로 업데이트합니다.
+                        panelColorPicked.BackColor = picked;
+
+                        // RGB 정보 레이블도 함께 업데이트합니다.
+                        lblRGB.Text = $"RGB: {picked.R}, {picked.G}, {picked.B}\nHex: #{picked.R:X2}{picked.G:X2}{picked.B:X2}";
+                    }
+                }
+                catch (Exception)
+                {
+                    // GetPixel이 특정 이미지 형식에서 예외를 발생시킬 수 있으므로 안전장치를 둡니다.
+                }
+                return; // 스포이드 모드일 때는 다른 로직(드래그 등)을 막기 위해 여기서 종료합니다.
             }
 
             // "이동" 모드일 때만 아래 로직이 실행됩니다.
@@ -656,20 +669,34 @@ namespace photo
             if (sender is not PictureBox pb) return;
 
             // ======== 작업 모드에 따른 기능 분기 ========
+            // [수정 1] 펜 작업 완료 시
             if (currentWorkMode == "펜" && isDrawing && currentStroke != null)
             {
-                if (penStrokesMap.TryGetValue(pb, out var strokes)) strokes.Add(currentStroke);
+                if (penStrokesMap.TryGetValue(pb, out var strokes))
+                {
+                    strokes.Add(currentStroke);
+                }
+                else
+                {
+                    var newStrokes = new List<PenStroke> { currentStroke };
+                    penStrokesMap[pb] = newStrokes;
+                }
                 currentStroke = null;
                 isDrawing = false;
-                ApplyStrokesToImage(pb);
+                pb.Invalidate(); // ApplyStrokesToImage(pb) 대신 Invalidate()만 호출
                 return;
             }
+
+            // [수정 2] 지우개 작업 완료 시
             if (currentWorkMode == "지우개" && isDrawing)
             {
                 isDrawing = false;
-                if (penStrokesMap.ContainsKey(pb)) ApplyStrokesToImage(pb);
+                // if (penStrokesMap.ContainsKey(pb)) ApplyStrokesToImage(pb); <- 바로 이 코드를 삭제해야 합니다!
+                pb.Invalidate(); // 화면만 갱신하도록 변경
                 return;
             }
+
+            // ======== 이하 기존 코드 ========
             if (currentWorkMode == "모자이크" && isMosaicing)
             {
                 isMosaicing = false;
@@ -738,17 +765,32 @@ namespace photo
                 if (basePb.AllowDrop)
                 {
                     e.Graphics.DrawImage(emojiPreviewImage,
-                       emojiPreviewLocation.X - emojiPreviewWidth / 2,
-                       emojiPreviewLocation.Y - emojiPreviewHeight / 2,
-                       emojiPreviewWidth, emojiPreviewHeight);
+                        emojiPreviewLocation.X - emojiPreviewWidth / 2,
+                        emojiPreviewLocation.Y - emojiPreviewHeight / 2,
+                        emojiPreviewWidth, emojiPreviewHeight);
                 }
             }
 
-            // ======== [1번 코드 기능 추가] 펜 선 및 자르기 영역 그리기 ========
+            // ======== [수정된 부분] 펜 선 및 자르기 영역 그리기 ========
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
 
-            // 1. 저장된 펜 선들 그리기 (ApplyStrokesToImage 적용으로 실시간 미리보기는 필요 없음)
-            // 2. 현재 그리고 있는 펜 선 그리기
+            // 1. 저장된 모든 펜 선들을 그립니다.
+            // 이 로직이 추가되어, 지워지지 않은 모든 선들이 화면에 계속 표시됩니다.
+            if (penStrokesMap.TryGetValue(pb, out var strokes))
+            {
+                foreach (var stroke in strokes)
+                {
+                    if (stroke.Points.Count >= 2)
+                    {
+                        using (Pen pen = new Pen(stroke.StrokeColor, stroke.StrokeWidth) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round })
+                        {
+                            e.Graphics.DrawLines(pen, stroke.Points.ToArray());
+                        }
+                    }
+                }
+            }
+
+            // 2. 현재 그리고 있는 펜 선 그리기 (실시간 미리보기)
             if (isDrawing && currentWorkMode == "펜" && currentStroke != null && currentStroke.Points.Count >= 2)
             {
                 using (Pen pen = new Pen(currentStroke.StrokeColor, currentStroke.StrokeWidth) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round })
@@ -2827,12 +2869,37 @@ namespace photo
                 return;
             }
 
-            Bitmap sourceBitmap = (Bitmap)selectedImage.Image;
-            Rectangle intersected = Rectangle.Intersect(cropRect, new Rectangle(Point.Empty, sourceBitmap.Size));
+            // 원본 이미지를 복사하여 임시 비트맵을 만듭니다.
+            // 원본 PictureBox의 이미지를 직접 수정하지 않기 위함입니다.
+            Bitmap bitmapWithStrokes = new Bitmap(selectedImage.Image);
+
+            // ================== [새로 추가된 로직] ==================
+            // 선택된 이미지에 그려진 펜 선들이 있는지 확인합니다.
+            if (penStrokesMap.TryGetValue(selectedImage, out var strokes) && strokes.Any())
+            {
+                // Graphics 객체를 이용해 임시 비트맵 위에 선들을 직접 그립니다.
+                using (Graphics g = Graphics.FromImage(bitmapWithStrokes))
+                {
+                    g.SmoothingMode = SmoothingMode.AntiAlias;
+                    foreach (var stroke in strokes)
+                    {
+                        if (stroke.Points.Count >= 2)
+                        {
+                            using (Pen pen = new Pen(stroke.StrokeColor, stroke.StrokeWidth) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round })
+                            {
+                                g.DrawLines(pen, stroke.Points.ToArray());
+                            }
+                        }
+                    }
+                }
+            }
+            // ========================================================
+
+            // 이제 그림이 합쳐진 'bitmapWithStrokes'를 대상으로 자르기를 수행합니다.
+            Rectangle intersected = Rectangle.Intersect(cropRect, new Rectangle(Point.Empty, bitmapWithStrokes.Size));
             if (intersected.Width > 0 && intersected.Height > 0)
             {
-                Bitmap cropped = sourceBitmap.Clone(intersected, sourceBitmap.PixelFormat);
-
+                Bitmap cropped = bitmapWithStrokes.Clone(intersected, bitmapWithStrokes.PixelFormat);
                 PictureBox pbNew = new PictureBox
                 {
                     Image = cropped,
@@ -2841,7 +2908,6 @@ namespace photo
                     Location = new Point(selectedImage.Right + 20, selectedImage.Top),
                     Tag = new Bitmap(cropped)
                 };
-
                 EnableDoubleBuffering(pbNew);
                 imageList.Add((pbNew, (Bitmap)pbNew.Tag));
                 imageTransparencyMap[pbNew] = 255;
@@ -2850,7 +2916,6 @@ namespace photo
                 pbNew.MouseMove += pictureBox_MouseMove;
                 pbNew.MouseUp += pictureBox_MouseUp;
                 pbNew.Paint += pictureBox_Paint;
-
                 pbNew.AllowDrop = true;
                 pbNew.DragEnter += PictureBox_DragEnter;
                 pbNew.DragOver += PictureBox_DragOver;
@@ -2865,8 +2930,10 @@ namespace photo
                 selectedImage = pbNew;
                 pbNew.Invalidate();
             }
-        }
 
+            // 임시로 사용한 비트맵 리소스를 해제합니다.
+            bitmapWithStrokes.Dispose();
+        }
         // 그려진 선들을 이미지에 영구적으로 합성하는 메서드
         private void ApplyStrokesToImage(PictureBox pb)
         {
